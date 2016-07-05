@@ -127,7 +127,158 @@ class Data_Handle():
 
 	def get_event(self,eid):
 		return self.alist[eid]
+
+class DataML():
 	
+	def __init__(self):
+		
+		#~ self.set_cut_pars(180,10,40)
+		self.set_cut_pars(90,5,35)
+	
+	def get_size(self):
+		return len(self.alist)
+	
+	def get_runner_ids(self,array):
+		return set(array['rid'])
+	
+	def set_cut_pars(self,ucut,lcut,split):
+		self.cut_pars = { 'ucut':ucut, 'lcut':lcut, 'split':split }
+				
+	def split_arrays(self,alist):
+		
+		ucut = self.cut_pars['ucut']
+		lcut = self.cut_pars['lcut']
+		split = self.cut_pars['split']
+		
+		flist,rlist=[],[]
+		for i in xrange(len(alist)):
+			
+			array=alist[i]
+			
+			#cut datapoints too far back and too clase to race
+			array = array[array['time']>-ucut]
+			array = array[array['time']<-lcut]
+			
+			#split in feature and result array
+			fa = array[array['time']<-split]
+			ra = array[array['time']>-split]
+			
+			flist.append(fa)
+			rlist.append(ra)
+			
+		self.flist = flist
+		self.rlist = rlist		
+
+	def get_result(self,eid,rid):
+		
+		a = self.rlist[eid]
+		a = a[a['rid']==rid]		
+		
+		if len(a)>=5:	slope = self.get_slope(a['time'],a['price'])
+		else:					slope = np.nan
+		return slope
+	
+	def get_runner_name(self,eid,rid):
+		a = self.alist[eid]
+		a = a[a['rid']==rid]
+		if len(set(a['name']))>1: raise ValueError('more than one runner name for rid (%d)' % rid)
+		else: return a['name'][0]
+
+	def get_slope(self,xs,ys):
+		
+		A = ( xs[0],  ys[0] )
+		B = ( xs[-1], ys[-1] )		
+		
+		s = (B[1]-A[1]) / (B[0]-A[0])
+		
+		return np.round(s,5)
+		
+	def get_maximas(self,ys):
+		maximas=0
+		for i in xrange(len(ys)):
+			
+			if i==0: continue
+			
+			else:
+				
+				if ys[i] > ys[i-1]: 		tmp=1  
+				elif ys[i] == ys[i-1]: 	tmp=0
+				elif ys[i] < ys[i-1]: 	tmp=-1
+
+				if i==1: s=tmp
+				else:
+					if s==tmp: continue
+					elif tmp==0: continue
+					else:						
+						s=tmp
+						maximas+=1
+		
+		return maximas
+	
+	def get_features(self,eid,rid):
+		
+		a = self.flist[eid]
+		a = a[a['rid']==rid]
+		
+		dic={}
+		if len(a)>=5:	
+			
+			first  = a['price'][0]
+			last   = a['price'][-1]
+			median = np.median(a['price'])
+			avg = np.average(a['price'])
+			maximas= self.get_maximas(a['price'])
+			tot_slope  = self.get_slope(a['time'],a['price'])
+			end_slope  = self.get_slope(a['time'][-10:],a['price'][-10:])
+			
+			dic['first'] = first
+			#~ dic['last'] = last
+			dic['median'] = median
+			#~ dic['avg'] = avg
+			dic['tot_slope'] = tot_slope
+			dic['end_slope'] = end_slope
+			dic['med_dif'] = last-median		
+			dic['maximas'] = maximas	
+			
+		else: dic['nan']=np.nan
+					
+		return dic
+	
+	def get_lists(self,alist):
+		
+		print "loading features from event-arrays..."
+		
+		self.alist = alist
+		self.split_arrays(alist)
+		
+		rnames,fnames,fs,rs = [],[],[],[]
+		bar = progressbar.ProgressBar()
+		for eid in bar(xrange(self.get_size())):
+			
+			a = self.alist[eid]
+			
+			for rid in self.get_runner_ids(a):
+			
+				f = self.get_features(eid,rid)
+				r = self.get_result(eid,rid)
+				
+				if np.isnan(r) or f.has_key('nan'): continue
+				
+				flist = [ f[k] for k in sorted(f.keys()) ] 
+				
+				fs.append(flist)
+				rs.append(r)
+				
+				rnames.append(self.get_runner_name(eid,rid))
+		
+		print '%d runners in data\n' % len(fs) 
+		
+		self.rnames = rnames
+		self.fnames = sorted(f.keys())
+		self.fs = np.array(fs)
+		self.rs = np.array(rs)
+		
+		return self.rnames,self.fnames,self.fs, self.rs	
 
 			
 def main():
