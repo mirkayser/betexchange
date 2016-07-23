@@ -126,6 +126,7 @@ class ScrapeEvent():
 	def get_runner_names(self):
 		
 		xpaths = ['//h3[@class="ng-binding ng-isolate-scope runner-name runner-name-with-jockey"]',
+							'//h3[@class="ng-binding ng-isolate-scope runner-name"]',
 							'//span[@class="runner-name ng-binding ng-isolate-scope"]']
 		for xpath in xpaths:					
 			rnames = self.driver.find_elements_by_xpath(xpath)
@@ -207,13 +208,42 @@ class ScrapeEvent():
 		self.driver.close()
 		self.driver.quit()
 
+def get_event_schedule(events):
+	
+	now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
+	fname = 'Data/schedules/schedule_'+now+'.txt'
+	
+	names,e_times,a_times = [],[],[]
+	for e in events:
+		names.append(e['link'])
+		e_times.append(e['time_e'])
+		a_times.append( e['time_e'] - datetime.timedelta(minutes=35) )
+	
+	a = np.array(zip(names,a_times,e_times),dtype=[('name','S100'),('a_time',object),('e_time',object)])
+	a.sort(order=['e_time'])	
+		
+	output = 'Schedule Races:\n'
+	for e in a:
+		
+		a_time = e['a_time'].strftime("%m-%d %H:%M")	
+		e_time = e['e_time'].strftime("%m-%d %H:%M")
+				
+		output += '%s: %s -> %s\n' % (e['name'], a_time, e_time)
+	
+	with open(fname,"wb") as textfile:
+		textfile.write(output)
+	print output	
+	
 def scrape_events(etuple):
 
 	run=etuple[0]
 	events=etuple[1]
 	
 	if len(events)>15: events = events[:15]
-
+	
+	#schedule events, start analysis/event
+	get_event_schedule(events)
+	
 	finished = np.zeros_like(events)
 	while len(finished[finished==0])>0:
 		
@@ -247,7 +277,7 @@ def scrape_events(etuple):
 				output+= '\n  start in %s  (%d datapoints, %d runners)' % (str(diff),num_datapoints,num_runners)
 				
 				#save copy for analysis
-				if datetime.timedelta(minutes=120) > (event.data['time_e'] - datetime.datetime.now()):
+				if datetime.timedelta(minutes=40) > (event.data['time_e'] - datetime.datetime.now()):
 					event.save_data(dirnm='Data/prediction/')
 				
 				#save data and close event
@@ -255,7 +285,7 @@ def scrape_events(etuple):
 				event.close()
 			
 			except:
-				output+= '\n--WARNING: event skipped (%s)' % events[i]['link']
+				output+= '\n--WARNING: event skipped (%s)\n%s' % (events[i]['link'],sys.exc_info()[:2])
 				finished[i] = 1
 				embed()
 			
@@ -269,7 +299,7 @@ def main():
 parser = OptionParser()
 parser.add_option("-l", "--load-events", dest="load_events", action="store_true", default=False,
                   help="load event list from file (events.pkl)")
-parser.add_option("-n", "--numProcesses", dest="numProcesses", default='2',
+parser.add_option("-n", "--numProcesses", dest="numProcesses", default='1',
                   help="specifies how many processes scrape simultaneously")
 parser.add_option("-t", "--timespan", dest="timespan", default='90,150',
                   help="specifies range in time from where to select events")
