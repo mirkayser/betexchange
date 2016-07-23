@@ -13,11 +13,10 @@ from data_handle import Data_Handle, DataML
 from IPython import embed
 #embed() # this call anywhere in your program will start IPython
 
-def prepareData(datalist,limit=0.1):
-	"""prepare samples for ml and randomize order"""		
-	
-	np.random.shuffle(datalist)
-	runner_names,feature_names,features,result = DataML().get_lists(datalist)
+np.set_printoptions(precision=3, threshold=50, linewidth=100)
+
+def prepareData(features,result,limit=0.1):
+	"""prepare samples for ml"""		
 	
 	y=[]
 	for r in result:
@@ -28,7 +27,7 @@ def prepareData(datalist,limit=0.1):
 	x=np.array(features)
 	y=np.array(y)
 
-	return x,y,feature_names
+	return x,y
 
 class CombiCLF():
 	
@@ -124,6 +123,25 @@ class HighProb():
 		
 		return ym
 
+	def predict_proba(self,x):
+		
+		if not self.trained: raise ValueError('CLF not trained, run self.fit()')
+		
+		p = self.clf.predict_proba(x) 
+		
+		ym,pm=[],[]
+		for i in xrange(len(x)):
+			tmp1,tmp2=np.nan,np.nan
+			for j,cl in enumerate(self.clf.classes_):
+				if p[i][j]>self.p:	
+					tmp1=cl 
+					tmp2=p[i][j]
+			ym.append(tmp1)
+			pm.append(tmp2)					
+		ym=np.array(ym)
+		pm=np.array(pm)
+		
+		return ym,pm
 		
 	def score(self,x,y):
 		
@@ -253,10 +271,17 @@ class Classifier():
 def main():
 	print ''
 
-	d = Data_Handle(load=1)
+	#load datalist from file
+	datalist = Data_Handle(load=1).get_datalist()
 	
-	#prepare data for classifiers (shuffle)
-	x,y,fnames = prepareData(d.alist,limit=0.1)
+	#randomize sample
+	np.random.shuffle(datalist)
+	
+	#get lists (names,features,etc...)
+	runner_names,feature_names,features,result = DataML().get_lists(datalist)
+	
+	#prepare data for classifiers
+	x,y = prepareData(features,result,limit=0.1)
 	
 	#split in train and test samples (not random!!!)
 	xtrain,xcontrol,ytrain,ycontrol = cross_validation.train_test_split(x,y,test_size=0.2,random_state=42)
