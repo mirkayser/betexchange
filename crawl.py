@@ -282,10 +282,10 @@ timespan = ( int(options.timespan.split(",")[0]), int(options.timespan.split(","
 
 #get event urls
 if options.load_events:
-	with open('events.pkl','rb')as inputfile: events = pickle.load(inputfile)	
+	with open('cache-events.pkl','rb')as inputfile: events = pickle.load(inputfile)	
 else:
 	events = sorted(get_events(timespan=timespan,trial=options.trial), key=itemgetter('time_e'))
-	with open('events.pkl','wb') as outputfile: pickle.dump(events,outputfile,pickle.HIGHEST_PROTOCOL)
+	with open('cache-events.pkl','wb') as outputfile: pickle.dump(events,outputfile,pickle.HIGHEST_PROTOCOL)
 	
 
 events = np.array(events)
