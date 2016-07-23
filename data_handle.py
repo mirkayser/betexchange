@@ -15,22 +15,25 @@ from glob import glob
 
 class Data_Handle():
 	
-	def __init__(self,timeunit=60, load=False):
+	def __init__(self,timeunit=60, load=False,remove=False):
 		
 		self.fname = 'Data/data.npy'
 		self.timeunit=float(timeunit)
 		
 		if load: self.load_data()
-		else: self.cut_raw_data()
+		else: self.cut_raw_data(remove=remove)
 
 		
-	def cut_raw_data(self):
+	def cut_raw_data(self,remove=False):
 
-		def gen_array(events):
+		def gen_datalist(events):
+			
+			print 'generating datalist...'
 			
 			count=0
 			alist=[]
-			for i in xrange(len(events)):
+			bar = progressbar.ProgressBar()
+			for i in bar(xrange(len(events))):
 				
 				x = events[i]
 				
@@ -60,9 +63,13 @@ class Data_Handle():
 		
 		fnames = glob(inputdir+'*')		
 		
+		rm_count=0
 		events = []		
 		bar = progressbar.ProgressBar()
 		for fname in bar(fnames):	
+			
+			uncomplete=False
+			
 			with open(fname,'rb')as inputfile: event = pickle.load(inputfile)
 			
 			data = event['data']
@@ -73,21 +80,28 @@ class Data_Handle():
 					data.pop(k,None)
 		
 			#skip sets without data
-			if len(data.keys())<1: continue
+			if len(data.keys())<1: uncomplete=True
 			
 			#skip sets without complete data
-			elif datetime.timedelta(minutes=15) < ( event['time_e'] - data[data.keys()[0]][-1][0]):	continue
+			elif datetime.timedelta(minutes=15) < ( event['time_e'] - data[data.keys()[0]][-1][0]):	
+				uncomplete=True
 			
 			#save quality data sets 
 			else:
 				event['time']=event['data'][event['data'].keys()[-1]][-1][0]
 				events.append(event)
-		
-		alist = gen_array(events)
+			
+			#remove files
+			if remove and uncomplete:
+				os.system('rm %s' % fname.replace("(","\(").replace(")","\)"))
+				rm_count+=1
+				
+		alist = gen_datalist(events)
 		np.save(self.fname,alist)
 		self.alist = alist
 		
 		print '%d of %d events written to %s\n' % (len(events),len(fnames),self.fname)
+		if remove: print '%d events removed' % rm_count
 
 	def load_data(self):
 		self.alist = np.load(self.fname)
@@ -127,6 +141,9 @@ class Data_Handle():
 
 	def get_event(self,eid):
 		return self.alist[eid]
+		
+	def get_datalist(self):
+		return self.alist
 
 class DataML():
 	
@@ -287,13 +304,13 @@ def main():
 	from my.tools import Timer
 	timer=Timer()
 			
-	d = Data_Handle(load=1)
+	d = Data_Handle(load=0,remove=0)
 	
-	for i in xrange(15):
-		d.draw_event(i)
+	#~ for i in xrange(15):
+		#~ d.draw_event(i)
 	
-	e4 = d.get_event(4)
-	e5 = d.get_event(5)
+	#~ e4 = d.get_event(4)
+	#~ e5 = d.get_event(5)
 
 	
 	timer.stop()

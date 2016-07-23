@@ -15,7 +15,7 @@ from my.tools import *
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By		
 
-def get_events(timespan=(4,12),trial=False):
+def get_events(timespan=(90,150),trial=False):
 	
 	import progressbar
 	from selenium.webdriver.support import expected_conditions as EC
@@ -58,8 +58,8 @@ def get_events(timespan=(4,12),trial=False):
 					dic['time_e'] = time_e
 					events.append(dic)
 			else:	
-				#select events with min 4 and max 12 hours time diff to start
-				if datetime.timedelta(hours=timespan[1]) > (time_e - datetime.datetime.now()) > datetime.timedelta(hours=timespan[0]):
+				#select events with timespan time diff to start
+				if datetime.timedelta(minutes=timespan[1]) > (time_e - datetime.datetime.now()) > datetime.timedelta(minutes=timespan[0]):
 				
 					dic['time_e'] = time_e
 					events.append(dic)	
@@ -74,19 +74,19 @@ class ScrapeEvent():
 	
 	def __init__(self,event):
 		
-		self.event = event
+		self.data = event
 		self.spider = Spider(gui=0)
 		self.driver = self.spider.driver
-		self.spider.get_url(self.event['link'])
+		self.spider.get_url(self.data['link'])
 
-		self.fname = 'Data/raw/data_'+str(self.event['time_e']).replace(" ","_")+'_'+self.event['link'].split("/")[-1]+'.pkl'
+		self.fname = 'data_'+str(self.data['time_e']).replace(" ","_")+'_'+self.data['link'].split("/")[-1]+'.pkl'
 		self.load_data()
 
 	def get_status(self):
 		
-		if not self.event.has_key('status'):	self.event['status'] = 'before'
+		if not self.data.has_key('status'):	self.data['status'] = 'before'
 		
-		if self.event['status']!='finished':
+		if self.data['status']!='finished':
 				 
 			try:	  suspended = self.driver.find_element_by_xpath('//span[contains(@class,"suspended-label")]').is_displayed()
 			except: suspended=False
@@ -97,16 +97,16 @@ class ScrapeEvent():
 				finished = True
 				
 				#add winner
-				if self.event.has_key('data'):
+				if self.data.has_key('data'):
 					winners=[]
 					winner = wrapper.split("Winner")[1][:30]
-					for key in self.event['data'].keys():
+					for key in self.data['data'].keys():
 						if key in winner:
 							winners.append(key)
 					if len(winners)!=1:
-						self.event['winner']='nan'
+						self.data['winner']='nan'
 					else: 
-						self.event['winner']=winners[0]
+						self.data['winner']=winners[0]
 			
 			else:
 				try:		
@@ -114,30 +114,40 @@ class ScrapeEvent():
 				except:	pass
 					
 			if suspended:
-				if self.event['status']!='suspended':	
-					self.event['time_s'] = datetime.datetime.now()
-					self.event['status'] = 'suspended'
+				if self.data['status']!='suspended':	
+					self.data['time_s'] = datetime.datetime.now()
+					self.data['status'] = 'suspended'
 			elif finished:	
-				self.event['time_f'] = datetime.datetime.now()			
-				self.event['status'] = 'finished'
+				self.data['time_f'] = datetime.datetime.now()			
+				self.data['status'] = 'finished'
 			else:
-				self.event['status'] = 'before'
+				self.data['status'] = 'before'
+	
+	def get_runner_names(self):
+		
+		xpaths = ['//h3[@class="ng-binding ng-isolate-scope runner-name runner-name-with-jockey"]',
+							'//span[@class="runner-name ng-binding ng-isolate-scope"]']
+		for xpath in xpaths:					
+			rnames = self.driver.find_elements_by_xpath(xpath)
+			if len(rnames)!=0:
+				break
+		return rnames
 		
 	def add_data(self):
 
 		from selenium.webdriver.support import expected_conditions as EC
 		from selenium.webdriver.common.by import By		
-
-		self.spider.get_url(self.event['link'])
+		
+		self.spider.get_url(self.data['link'])
 		self.spider.wait.until(EC.presence_of_element_located((By.XPATH,'//span[@class="venue-name ng-binding"]')))
 		
-		rnames = self.driver.find_elements_by_xpath('//span[@class="runner-name ng-binding ng-isolate-scope"]')
+		rnames = self.get_runner_names()
 		rprices= self.driver.find_elements_by_xpath('//button[contains(@class,"selection-button") and contains(@class,"back")]')
 		if len(rprices)==0: raise ValueError('no prices found')
 		
 		for i in xrange(len(rprices)):
 			
-			name = rnames[i].get_attribute('textContent')
+			name = rnames[i].text
 			price = rprices[i].get_attribute('textContent')
 			if price=='':
 				print '   WARNING: no price available (%s)' % name
@@ -145,49 +155,52 @@ class ScrapeEvent():
 			price = float(price.split(" ")[0])
 			time  = datetime.datetime.now()
 			
-			self.event['data'][name].append( (time,price) )
-			
-	def print_last_set(self):
-		
-		for item in self.event['data'].items():
-			print 'runner: %s,  %s' % (item[0],str(item[1][-1]))
+			self.data['data'][name].append( (time,price) )
 
-	def save_data(self):
-		
-		import pickle
-		
-		with open(self.fname,'wb') as outputfile: pickle.dump(self.event,outputfile,pickle.HIGHEST_PROTOCOL)
-	
 	def load_data(self):
 		
 		import pickle
 		
+		#create datafile
 		if not os.path.isfile(self.fname):	
 
 			#check status
 			self.get_status()
 			
-			if self.event['status']=='before':
+			if self.data['status']=='before':
 			
 				#runner names
-				self.event['data'] = {}
-				xpath_rnames = '//span[@class="runner-name ng-binding ng-isolate-scope"]'
+				self.data['data'] = {}
+				self.spider.wait.until(EC.presence_of_element_located((By.XPATH,'//span[@class="venue-name ng-binding"]')))
 				
-				self.spider.wait.until(EC.presence_of_element_located((By.XPATH,xpath_rnames)))
-				rnames = self.driver.find_elements_by_xpath(xpath_rnames)
+				rnames = self.get_runner_names()
 				for rname in rnames:
-					name = rname.get_attribute('textContent')
-					self.event['data'][name]=[]		
+					#~ name = rname.get_attribute('textContent')
+					name = rname.text
+					self.data['data'][name]=[]		
 				
 				#event name
 				xpath_name = '//span[contains(@class,"-name ng-binding") and (contains(@class,"venue") or contains(@class,"event"))]'
 				self.spider.wait.until(EC.presence_of_element_located((By.XPATH,xpath_name)))
-				self.event['name'] = self.driver.find_element_by_xpath(xpath_name).get_attribute('textContent')			
-			
-
+				self.data['name'] = self.driver.find_element_by_xpath(xpath_name).get_attribute('textContent')			
+		
+		#load datafile	
 		else:
 			with open(self.fname,'rb')as inputfile: 
-				self.event = pickle.load(inputfile)
+				self.data = pickle.load(inputfile)
+			
+	def print_last_set(self):
+		
+		for item in self.data['data'].items():
+			print 'runner: %s,  %s' % (item[0],str(item[1][-1]))
+
+	def save_data(self,dirnm):
+		
+		import pickle
+		
+		fname = dirnm + self.fname
+		
+		with open(fname,'wb') as outputfile: pickle.dump(self.data,outputfile,pickle.HIGHEST_PROTOCOL)
 				
 	def close(self):
 		
@@ -211,6 +224,7 @@ def scrape_events(etuple):
 			if finished[i]==1: continue
 			
 			output=''
+
 			try:
 				event = ScrapeEvent(events[i])				
 				
@@ -218,27 +232,32 @@ def scrape_events(etuple):
 				event.get_status()
 				
 				#if event has finished, take it out of loop, else add datapoint for ongoing event
-				if event.event['status']=='finished':
+				if event.data['status']=='finished':
 					output+='\n  --race finished'
 					finished[i] = 1
-				elif event.event['status']=='suspended':
+				elif event.data['status']=='suspended':
 					output+='\n  --suspended'
 				else:	
 					event.add_data()
 				
-				diff = (event.event['time_e'] - datetime.datetime.now())
-				num_runners = len(event.event['data'].keys())
-				num_datapoints = len(event.event['data'][event.event['data'].keys()[0]])
-				output+= '\n  Run %i, Scrape %i:  %s  (%s)' % (run,i+1,event.event['name'],event.event['link'])
+				diff = (event.data['time_e'] - datetime.datetime.now())
+				num_runners = len(event.data['data'].keys())
+				num_datapoints = len(event.data['data'][event.data['data'].keys()[0]])
+				output+= '\n  Run %i, Scrape %i:  %s  (%s)' % (run,i+1,event.data['name'],event.data['link'])
 				output+= '\n  start in %s  (%d datapoints, %d runners)' % (str(diff),num_datapoints,num_runners)
 				
-				#save data and close event
-				event.save_data()
-				event.close()
+				#save copy for analysis
+				if datetime.timedelta(minutes=120) > (event.data['time_e'] - datetime.datetime.now()):
+					event.save_data(dirnm='Data/prediction/')
 				
+				#save data and close event
+				event.save_data(dirnm='Data/new/')				
+				event.close()
+			
 			except:
 				output+= '\n--WARNING: event skipped (%s)' % events[i]['link']
 				finished[i] = 1
+				embed()
 			
 			output+='\n  --%s' % finished
 			print output
@@ -252,7 +271,7 @@ parser.add_option("-l", "--load-events", dest="load_events", action="store_true"
                   help="load event list from file (events.pkl)")
 parser.add_option("-n", "--numProcesses", dest="numProcesses", default='2',
                   help="specifies how many processes scrape simultaneously")
-parser.add_option("-t", "--timespan", dest="timespan", default='4,6',
+parser.add_option("-t", "--timespan", dest="timespan", default='90,150',
                   help="specifies range in time from where to select events")
 parser.add_option("--trial", dest="trial", action="store_true", default=False,
                   help="get events close to finish")

@@ -18,8 +18,7 @@ numRuns = int(options.numRuns)
 
 for i in xrange(numRuns):
 	
-	#~ comand = 'gnome-terminal -e "./crawl.py -n 1 -t 3,4"'
-	comand = 'gnome-terminal -e "./crawl.py -n 1 -t 2,3"'
+	comand = 'gnome-terminal -e "./crawl.py -n 1"'
 	os.system(comand)
 	
 	print 'waiting to start run %d:' % (i+2)
