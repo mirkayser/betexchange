@@ -11,27 +11,23 @@ import matplotlib.pyplot as mp
 import matplotlib.gridspec as gridspec
 from glob import glob
 
-
+np.set_printoptions(precision=3, threshold=300, linewidth=100)
 
 class Data_Handle():
 	
-	def __init__(self,timeunit=60, load=False,remove=False):
+	def __init__(self,timeunit=60):
 		
 		self.fname = 'Data/data.npy'
 		self.timeunit=float(timeunit)
 		
-		if load: self.load_data()
-		else: self.cut_raw_data(remove=remove)
-
+	def cut_raw_data(self,fnames,analysis=True,remove=False):
 		
-	def cut_raw_data(self,remove=False):
-
 		def gen_datalist(events):
 			
 			print 'generating datalist...'
 			
 			count=0
-			alist=[]
+			linklist,datalist=[],[]
 			bar = progressbar.ProgressBar()
 			for i in bar(xrange(len(events))):
 				
@@ -41,7 +37,7 @@ class Data_Handle():
 				for rname in x['data'].keys():
 					for j,item in enumerate(x['data'][rname]):
 						delta = -( (x['time']-item[0]).total_seconds() ) /self.timeunit
-						price = np.round(item[1],2)
+						price = np.round(item[1],3)
 						
 						event_ids.append(i)
 						runner_ids.append(count)
@@ -53,62 +49,81 @@ class Data_Handle():
 					count+=1
 						
 				array = np.array(zip(event_ids,runner_ids,runner_names,point_nums,deltas,prices),dtype=[('eid',int),('rid',int),('name','S30'),('num',int),('time',float),('price',float)])
-				alist.append(array)
+				datalist.append( array )
+				linklist.append( events[i]['link'] )
 			
-			return alist
+			return datalist,linklist
 		
-		print 'reading events from raw data...'
-			
-		inputdir  = 'Data/raw/'
+		def main_function():
 		
-		fnames = glob(inputdir+'*')		
-		
-		rm_count=0
-		events = []		
-		bar = progressbar.ProgressBar()
-		for fname in bar(fnames):	
+			print 'reading %d events...' % len(fnames)
 			
-			uncomplete=False
-			
-			with open(fname,'rb')as inputfile: event = pickle.load(inputfile)
-			
-			data = event['data']
-			
-			#erase runners with empty list
-			for k in data.keys():
-				if len(data[k])==0: 
-					data.pop(k,None)
-		
-			#skip sets without data
-			if len(data.keys())<1: uncomplete=True
-			
-			#skip sets without complete data
-			elif datetime.timedelta(minutes=15) < ( event['time_e'] - data[data.keys()[0]][-1][0]):	
-				uncomplete=True
-			
-			#save quality data sets 
-			else:
-				event['time']=event['data'][event['data'].keys()[-1]][-1][0]
-				events.append(event)
-			
-			#remove files
-			if remove and uncomplete:
-				os.system('rm %s' % fname.replace("(","\(").replace(")","\)"))
-				rm_count+=1
+			rm_count=0
+			events = []		
+			bar = progressbar.ProgressBar()
+			for fname in bar(fnames):	
 				
-		alist = gen_datalist(events)
-		np.save(self.fname,alist)
-		self.alist = alist
+				uncomplete=False
+				
+				with open(fname,'rb')as inputfile: event = pickle.load(inputfile)
+				
+				data = event['data']
+				
+				#erase runners with empty list
+				for k in data.keys():
+					if len(data[k])==0: 
+						data.pop(k,None)
+			
+				#skip sets without data
+				if len(data.keys())<1: 
+					uncomplete=True
+				
+				#skip sets without complete data
+				if analysis:	min_timedelta=50
+				else:					min_timedelta=15
+				#~ print event['time_e'] - data[data.keys()[0]][-1][0]
+				if datetime.timedelta(minutes=min_timedelta) < ( event['time_e'] - data[data.keys()[0]][-1][0] ):	
+					uncomplete=True
+				
+				#save quality data sets 
+				if not uncomplete:
+					#~ event['time']=event['data'][event['data'].keys()[-1]][-1][0]
+					event['time']=event['time_e']
+					events.append(event)
+				
+				#remove files
+				if remove and uncomplete:
+					os.system('rm %s' % fname.replace("(","\(").replace(")","\)"))
+					rm_count+=1
+			
+			if len(events)>0:		
+				datalist,linklist = gen_datalist(events)
+				self.datalist = datalist
+				self.linklist = linklist
+				
+				if not analysis:
+					np.save(self.fname,datalist)
+					print '%d of %d events read into dataset & written to %s\n' % (len(events),len(fnames),self.fname)
+				else:
+					print '%d of %d events read into dataset\n' % (len(events),len(fnames))
+			
+			else:
+				raise ValueError('No valid events found')
+			
+			if remove: print '%d events removed' % rm_count
 		
-		print '%d of %d events written to %s\n' % (len(events),len(fnames),self.fname)
-		if remove: print '%d events removed' % rm_count
+		main_function()
+		
+		return self
 
 	def load_data(self):
-		self.alist = np.load(self.fname)
+		self.datalist = np.load(self.fname)
 		print '%d events read from %s\n' % (self.get_size(),self.fname)
+		
+		return self
 
 	def get_size(self):
-		return len(self.alist)
+		return len(self.datalist)
 
 	def draw_event(self,eid):
 		
@@ -140,10 +155,13 @@ class Data_Handle():
 		mp.savefig('event_%d.pdf' % eid)
 
 	def get_event(self,eid):
-		return self.alist[eid]
+		return self.datalist[eid]
 		
 	def get_datalist(self):
-		return self.alist
+		return self.datalist
+
+	def get_linklist(self):
+		return self.linklist
 
 class DataML():
 	
@@ -153,7 +171,7 @@ class DataML():
 		self.set_cut_pars(90,5,35)
 	
 	def get_size(self):
-		return len(self.alist)
+		return len(self.datalist)
 	
 	def get_runner_ids(self,array):
 		return set(array['rid'])
@@ -161,18 +179,18 @@ class DataML():
 	def set_cut_pars(self,ucut,lcut,split):
 		self.cut_pars = { 'ucut':ucut, 'lcut':lcut, 'split':split }
 				
-	def split_arrays(self,alist):
+	def split_arrays(self,datalist):
 		
 		ucut = self.cut_pars['ucut']
 		lcut = self.cut_pars['lcut']
 		split = self.cut_pars['split']
 		
 		flist,rlist=[],[]
-		for i in xrange(len(alist)):
+		for i in xrange(len(datalist)):
 			
-			array=alist[i]
+			array=datalist[i]
 			
-			#cut datapoints too far back and too clase to race
+			#cut datapoints too far back and too close to race
 			array = array[array['time']>-ucut]
 			array = array[array['time']<-lcut]
 			
@@ -183,8 +201,7 @@ class DataML():
 			flist.append(fa)
 			rlist.append(ra)
 			
-		self.flist = flist
-		self.rlist = rlist		
+		return flist,rlist		
 
 	def get_result(self,eid,rid):
 		
@@ -196,7 +213,7 @@ class DataML():
 		return slope
 	
 	def get_runner_name(self,eid,rid):
-		a = self.alist[eid]
+		a = self.datalist[eid]
 		a = a[a['rid']==rid]
 		if len(set(a['name']))>1: raise ValueError('more than one runner name for rid (%d)' % rid)
 		else: return a['name'][0]
@@ -261,25 +278,26 @@ class DataML():
 					
 		return dic
 	
-	def get_lists(self,alist):
+	def get_lists(self,datalist,analysis=True):
 		
 		print "loading features from event-arrays..."
 		
-		self.alist = alist
-		self.split_arrays(alist)
+		self.datalist = datalist
+		self.flist,self.rlist = self.split_arrays(datalist)
 		
 		rnames,fnames,fs,rs = [],[],[],[]
 		bar = progressbar.ProgressBar()
 		for eid in bar(xrange(self.get_size())):
 			
-			a = self.alist[eid]
+			a = self.datalist[eid]
 			
 			for rid in self.get_runner_ids(a):
 			
 				f = self.get_features(eid,rid)
 				r = self.get_result(eid,rid)
 				
-				if np.isnan(r) or f.has_key('nan'): continue
+				if not analysis and np.isnan(r): continue
+				if f.has_key('nan'): continue
 				
 				flist = [ f[k] for k in sorted(f.keys()) ] 
 				
@@ -303,19 +321,12 @@ def main():
 
 	from my.tools import Timer
 	timer=Timer()
+	
+	fnames = glob('Data/raw/'+'*')
 			
-	d = Data_Handle(load=0,remove=0)
-	
-	#~ for i in xrange(15):
-		#~ d.draw_event(i)
-	
-	#~ e4 = d.get_event(4)
-	#~ e5 = d.get_event(5)
-
+	d = Data_Handle().cut_raw_data(fnames=fnames,analysis=False,remove=False)
 	
 	timer.stop()
-	
-	#~ mp.show()
 
 if __name__ == "__main__":
     main()
