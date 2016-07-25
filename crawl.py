@@ -80,7 +80,6 @@ class ScrapeEvent():
 		self.spider.get_url(self.data['link'])
 
 		self.fname = 'data_'+str(self.data['time_e']).replace(" ","_")+'_'+self.data['link'].split("/")[-1]+'.pkl'
-		self.load_data()
 
 	def get_status(self):
 		
@@ -158,12 +157,14 @@ class ScrapeEvent():
 			
 			self.data['data'][name].append( (time,price) )
 
-	def load_data(self):
+	def load_data(self,dirnm):
 		
 		import pickle
 		
+		fname = dirnm + self.fname
+		
 		#create datafile
-		if not os.path.isfile(self.fname):	
+		if not os.path.isfile(fname):	
 
 			#check status
 			self.get_status()
@@ -187,7 +188,7 @@ class ScrapeEvent():
 		
 		#load datafile	
 		else:
-			with open(self.fname,'rb')as inputfile: 
+			with open(fname,'rb')as inputfile: 
 				self.data = pickle.load(inputfile)
 			
 	def print_last_set(self):
@@ -241,6 +242,8 @@ def scrape_events(etuple):
 	
 	if len(events)>15: events = events[:15]
 	
+	dirnm="Data/new/"
+	
 	#schedule events, start analysis/event
 	get_event_schedule(events)
 	
@@ -256,7 +259,11 @@ def scrape_events(etuple):
 			output=''
 
 			try:
+				#init event
 				event = ScrapeEvent(events[i])				
+				
+				#load runner nammes or existing data
+				event.load_data(dirnm=dirnm)
 				
 				#check if event has finished
 				event.get_status()
@@ -277,17 +284,17 @@ def scrape_events(etuple):
 				output+= '\n  start in %s  (%d datapoints, %d runners)' % (str(diff),num_datapoints,num_runners)
 				
 				#save copy for analysis
-				if datetime.timedelta(minutes=40) > (event.data['time_e'] - datetime.datetime.now()):
+				if datetime.timedelta(minutes=40) > diff:
 					event.save_data(dirnm='Data/prediction/')
 				
 				#save data and close event
-				event.save_data(dirnm='Data/new/')				
+				event.save_data(dirnm=dirnm)				
 				event.close()
 			
 			except:
 				output+= '\n--WARNING: event skipped (%s)\n%s' % (events[i]['link'],sys.exc_info()[:2])
 				finished[i] = 1
-				embed()
+				#~ embed()
 			
 			output+='\n  --%s' % finished
 			print output
@@ -322,11 +329,6 @@ events = np.array(events)
 np.random.shuffle(events)
 events_list = np.array_split(events,numProcesses)
 etuples = [ ( i+1,item ) for i,item in enumerate(events_list) ] 
-
-#test
-#~ embed()
-#~ event = ScrapeEvent(events[0])
-
 
 if numProcesses==1: scrape_events(etuples[0])
 else:	poolmap(scrape_events,etuples,numProcesses=numProcesses)

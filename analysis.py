@@ -73,8 +73,8 @@ class Analysis():
 		
 		#skip event if not enough data
 		if len(features)==0:
-			print 'WARNING: not enough data to fit event (%s)\n' % fname
-		
+			print 'WARNING: not enough data to fit event\n'
+					
 		#classification
 		else:
 		
@@ -106,9 +106,11 @@ def main():
 analysis = Analysis()
 analysis.fit()
 
-fnames = glob('Data/test/'+'*')
+#~ fnames = glob('Data/test/'+'*')
+#~ create_dummy_files(fnames)
 
-create_dummy_files(fnames)
+#~ fnames = ['Data/new/data_2016-07-25_13:15:00_1.125773511.pkl']
+fnames = glob('Data/new/'+'*')
 
 #load data from fnames
 dh = Data_Handle().cut_raw_data(fnames=fnames,analysis=True)

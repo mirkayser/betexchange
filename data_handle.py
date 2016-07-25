@@ -63,6 +63,8 @@ class Data_Handle():
 			bar = progressbar.ProgressBar()
 			for fname in bar(fnames):	
 				
+				print fname
+				
 				uncomplete=False
 				
 				with open(fname,'rb')as inputfile: event = pickle.load(inputfile)
@@ -81,8 +83,10 @@ class Data_Handle():
 				#skip sets without complete data
 				if analysis:	min_timedelta=50
 				else:					min_timedelta=15
-				#~ print event['time_e'] - data[data.keys()[0]][-1][0]
-				if datetime.timedelta(minutes=min_timedelta) < ( event['time_e'] - data[data.keys()[0]][-1][0] ):	
+				
+				if len(data.keys())==0: 
+					uncomplete=True
+				elif datetime.timedelta(minutes=min_timedelta) < ( event['time_e'] - data[data.keys()[0]][-1][0] ):	
 					uncomplete=True
 				
 				#save quality data sets 
