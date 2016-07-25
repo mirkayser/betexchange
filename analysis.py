@@ -41,23 +41,27 @@ def create_dummy_files(fnames):
 
 class Analysis():
 	
-	def __init__(self):
+	def __init__(self,max_price):
+		
+		print 'fitting methods to dataset:\n'
+		
+		self.max_price=float(max_price)
 		
 		#load datalist from file
 		datalist = Data_Handle().load_data().get_datalist()
 		
-		#~ #randomize sample
-		#~ np.random.shuffle(datalist)
+		#randomize sample
+		np.random.shuffle(datalist)
 		
 		#get lists (names,features,etc...)
-		runner_names,feature_names,features,result = DataML().get_lists(datalist)
+		runner_names,feature_names,features,result = DataML().get_lists(datalist,max_price=self.max_price)
 		
 		#prepare data for classifiers
 		self.x,self.y = prepareData(features,result,limit=0.1)
 		
 		#split in train and test samples (not random!!!)
 		self.xtrain,self.xcontrol,self.ytrain,self.ycontrol = cross_validation.train_test_split(self.x,self.y,test_size=0.2,random_state=42)
-		print 'Samples:\ntrain: %d\ncontrol: %d\n' % (len(self.x),len(self.xcontrol))	
+		print 'Samples (max_price=%.1f):\ntrain: %d\ncontrol: %d\n' % (self.max_price,len(self.x),len(self.xcontrol))	
 		
 		self.clf = Classifier()
 
@@ -66,14 +70,16 @@ class Analysis():
 		self.clf.fit(self.xtrain,self.ytrain)
 		self.clf.performance(self.xcontrol,self.ycontrol)
 
-	def predict(self,link,data,verbose=True):
+	def predict(self,link,data,verbose=True):			
+		
+		out = ''
 		
 		#get lists (names,features,etc...)
-		runner_names,feature_names,features,result = DataML().get_lists([data])	
+		runner_names,feature_names,features,result = DataML().get_lists([data],max_price=self.max_price)	
 		
 		#skip event if not enough data
 		if len(features)==0:
-			print 'WARNING: not enough data to fit event\n'
+			print 'WARNING: not enough usable data to predict event\n'
 					
 		#classification
 		else:
@@ -91,18 +97,26 @@ class Analysis():
 			k_ym[np.isnan(k_ym)] = 0
 			k_pm[np.isnan(k_pm)] = 0
 			
-			price = x[:,feature_names.index("last")]
+			#prediction possible
+			if np.any(c_ym)!=0 or np.any(t_ym)!=0 or np.any(k_ym)!=0:
+				
+				price = x[:,feature_names.index("last")]
+				
+				array = np.array(zip(runner_names,c_ym,t_ym,t_pm,k_ym,k_pm,price),dtype=[('name','S30'),('c_ym',int),('t_ym',int),('t_pm',float),('k_ym',int),('k_pm',float),('price',float)])
+							
+				#~ array[::-1].sort(order=['t_ym','t_pm'])	#reverse sort
+				array.sort(order=['price'])
+				
+				#output succesful prediction
+				out += 'url:  %s\n' % link
+				out += '%s    %s   %s          %s          %s\n' %(' '.ljust(20,' '), 'c','t','k','price')
+				for item in array:
+					out += '%s:  %2d  %2d (%.2f)  %2d (%.2f)   %5.2f\n' % (item['name'][:20].ljust(20,' '),item['c_ym'],item['t_ym'],item['t_pm'],item['k_ym'],item['k_pm'],item['price'])
 			
-			array = np.array(zip(runner_names,c_ym,t_ym,t_pm,k_ym,k_pm,price),dtype=[('name','S30'),('c_ym',int),('t_ym',int),('t_pm',float),('k_ym',int),('k_pm',float),('price',float)])
-						
-			#~ array[::-1].sort(order=['t_ym','t_pm'])	#reverse sort
-			array.sort(order=['price'])
-			
-			out =  'url:  %s\n\n' % link
-			out += '%s   %s  %s         %s         %s\n' %(' '.ljust(20,' '), 'c','t','k','price')
-			for item in array:
-				out += '%s:  %d  %d (%.2f)  %d (%.2f)  %5.2f\n' % (item['name'][:20].ljust(20,' '),item['c_ym'],item['t_ym'],item['t_pm'],item['k_ym'],item['k_pm'],item['price'])
-			print out
+			else:
+				print 'WARNING: no prediction possible (%s)\n' % link
+				
+			return out  
 			
 	def cross_validation(self):
 		
@@ -118,7 +132,7 @@ parser.add_option("--cv", dest="cv", action="store_true", default=False,
 (options, args) = parser.parse_args()
 
 #init analysis object
-analysis = Analysis()
+analysis = Analysis(max_price=5)
 
 if options.cv:
 	#perform cross validation
@@ -129,25 +143,40 @@ else:
 	if len(args)<1:
 		raise NameError("Usage: %s /path_some_file")
 	else: fnames=args
+	
+	#create dummy files for testing purpose
+	if fnames[0].split("/")[1]=='test':	create_dummy_files(fnames)
 
 	#train clf with existing data
 	analysis.fit()
+
+	#predict outcome events
+	print 'Predicting outcome events:\n'
 
 	#load event data from fnames
 	dh = Data_Handle().cut_raw_data(fnames=fnames,analysis=True)
 	linklist = dh.get_linklist()
 	datalist = dh.get_datalist()
 	
-	#predict outcome events
+	outputs = []
 	for i in xrange(len(datalist)):
 		
 		data = datalist[i]
 		link = linklist[i]
 		
-		analysis.predict(link,data)
-
-
-
+		out = analysis.predict(link,data)
+		
+		if out!='': outputs.append(out)
+	
+	if len(outputs)>0:
+		print '\n\nEvents with prediction:\n'
+		for i,output in enumerate(outputs):
+			print 'event #%d:' % i
+			print output
+			
+		print  '%d of %d events with prediction' % (len(outputs),len(datalist))
+	
+	#~ embed()
 	
 	
 

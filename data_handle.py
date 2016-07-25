@@ -280,9 +280,9 @@ class DataML():
 					
 		return dic
 	
-	def get_lists(self,datalist,analysis=True):
+	def get_lists(self,datalist,analysis=True,max_price=None):
 		
-		print "loading features from event-arrays..."
+		print "\nloading features from event-arrays..."
 		
 		self.datalist = datalist
 		self.flist,self.rlist = self.split_arrays(datalist)
@@ -301,6 +301,9 @@ class DataML():
 				if not analysis and np.isnan(r): continue
 				if f.has_key('nan'): continue
 				
+				if not max_price==None:
+					if f['last']>max_price: continue
+				
 				flist = [ f[k] for k in sorted(f.keys()) ] 
 				
 				fs.append(flist)
@@ -308,7 +311,7 @@ class DataML():
 				
 				rnames.append(self.get_runner_name(eid,rid))
 		
-		print '%d runners in data\n' % len(fs) 
+		print '%d runners in data' % len(fs) 
 		
 		self.rnames = rnames
 		self.fnames = sorted(f.keys())
