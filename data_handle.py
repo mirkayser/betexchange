@@ -63,8 +63,6 @@ class Data_Handle():
 			bar = progressbar.ProgressBar()
 			for fname in bar(fnames):	
 				
-				print fname
-				
 				uncomplete=False
 				
 				with open(fname,'rb')as inputfile: event = pickle.load(inputfile)
@@ -171,8 +169,8 @@ class DataML():
 	
 	def __init__(self):
 		
-		#~ self.set_cut_pars(180,10,40)
-		self.set_cut_pars(90,5,35)
+		#~ self.set_cut_pars(90,5,35)
+		self.set_cut_pars(70,5,15)
 	
 	def get_size(self):
 		return len(self.datalist)
@@ -270,12 +268,12 @@ class DataML():
 			end_slope  = self.get_slope(a['time'][-10:],a['price'][-10:])
 			
 			dic['first'] = first
-			#~ dic['last'] = last
+			dic['last'] = last
 			dic['median'] = median
 			#~ dic['avg'] = avg
 			dic['tot_slope'] = tot_slope
 			dic['end_slope'] = end_slope
-			dic['med_dif'] = last-median		
+			#~ dic['med_dif'] = last-median		
 			dic['maximas'] = maximas	
 			
 		else: dic['nan']=np.nan

@@ -15,58 +15,72 @@ from my.tools import *
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By		
 
-def get_events(timespan=(90,150),trial=False):
+def get_events(timespan=(90,150),countries=None):
 	
 	import progressbar
 	from selenium.webdriver.support import expected_conditions as EC
 	from selenium.webdriver.common.by import By
+	
+	events = []
 	
 	print 'searching for events on betfair.com'
 	spider = Spider(gui=0)
 	spider.get_url('https://www.betfair.com/exchange/horse-racing')
 	spider.wait.until(EC.presence_of_element_located((By.XPATH,'//div[@class="single-race"]/span/a')))
 	
-	events = []
-	bar = progressbar.ProgressBar()
-	races = spider.driver.find_elements_by_xpath('//div[@class="single-race"]/span/a')
-	for r in bar(races):
-		dic={}
-		dic['link']=r.get_attribute('href')
-		if dic['link'][-1]!='#':
-			
-			#set date	
-			if 'today' in r.get_attribute('class'):			date = datetime.date.today()
-			elif 'tomorrow' in r.get_attribute('class'): 	date = datetime.date.today() + datetime.timedelta(days=1)
-			else: continue
-			
-			#set time
-			time = r.get_attribute('textContent')
-			time = datetime.time(int(time[:2]),int(time[-2:]))
-			
-			#combine date and time
-			time_e = datetime.datetime.combine(date, time)
-			
-			#fix date for races in the first hours of the morning
-			if (time_e - datetime.datetime.now()) <= datetime.timedelta(days=0): time_e = time_e + datetime.timedelta(days=1)
-			
-			#fix time difference
-			time_e = time_e - datetime.timedelta(hours=5)
-			
-			if trial:
-				if datetime.timedelta(minutes=30) > (time_e - datetime.datetime.now()) > datetime.timedelta(minutes=0):
-					
-					dic['time_e'] = time_e
-					events.append(dic)
-			else:	
+	#select all available races
+	if countries==None:
+		races = spider.driver.find_elements_by_xpath('//div[@class="single-race"]/span/a')
+	
+	#select races from specified countries
+	else:
+		cs = spider.driver.find_elements_by_xpath('//div[@class="venue-event-list expandable"]')
+		races = []
+		for cou in countries:
+			for c in cs:
+				if c.get_attribute("rel")==cou:
+					elems = c.find_elements_by_xpath('./div/div/div/div/div/span/a')
+					for elem in elems:
+						races.append(elem)
+	
+	if len(races)>0:
+		bar = progressbar.ProgressBar()	
+		for r in bar(races):
+			dic={}
+			dic['link']=r.get_attribute('href')
+			if dic['link'][-1]!='#':
+				
+				#set date	
+				if 'today' in r.get_attribute('class'):				date = datetime.date.today()
+				elif 'tomorrow' in r.get_attribute('class'): 	date = datetime.date.today() + datetime.timedelta(days=1)
+				else: continue
+				
+				#set time
+				time = r.get_attribute('textContent')
+				time = datetime.time(int(time[:2]),int(time[-2:]))
+				
+				#combine date and time
+				time_e = datetime.datetime.combine(date, time)
+				
+				#fix date for races in the first hours of the morning
+				if (time_e - datetime.datetime.now()) <= datetime.timedelta(days=0): time_e = time_e + datetime.timedelta(days=1)
+				
+				#fix time difference
+				time_e = time_e - datetime.timedelta(hours=5)
+				
 				#select events with timespan time diff to start
 				if datetime.timedelta(minutes=timespan[1]) > (time_e - datetime.datetime.now()) > datetime.timedelta(minutes=timespan[0]):
 				
 					dic['time_e'] = time_e
 					events.append(dic)	
 					
-	spider.driver.close()			
-	print 'available: %d events' % len(events)			
-
+		print 'available: %d events' % len(events)	
+		spider.driver.close()
+		
+	else:
+		spider.driver.close()
+		raise ValueError('no events available in timespan')				
+				
 	return events
 	
 				
@@ -284,7 +298,7 @@ def scrape_events(etuple):
 				output+= '\n  start in %s  (%d datapoints, %d runners)' % (str(diff),num_datapoints,num_runners)
 				
 				#save copy for analysis
-				if datetime.timedelta(minutes=40) > diff:
+				if datetime.timedelta(minutes=25) > diff:
 					event.save_data(dirnm='Data/prediction/')
 				
 				#save data and close event
@@ -294,7 +308,6 @@ def scrape_events(etuple):
 			except:
 				output+= '\n--WARNING: event skipped (%s)\n%s' % (events[i]['link'],sys.exc_info()[:2])
 				finished[i] = 1
-				#~ embed()
 			
 			output+='\n  --%s' % finished
 			print output
@@ -308,20 +321,21 @@ parser.add_option("-l", "--load-events", dest="load_events", action="store_true"
                   help="load event list from file (events.pkl)")
 parser.add_option("-n", "--numProcesses", dest="numProcesses", default='1',
                   help="specifies how many processes scrape simultaneously")
-parser.add_option("-t", "--timespan", dest="timespan", default='90,150',
+parser.add_option("-t", "--timespan", dest="timespan", default='70,100',
                   help="specifies range in time from where to select events")
-parser.add_option("--trial", dest="trial", action="store_true", default=False,
-                  help="get events close to finish")
 
 (options, args) = parser.parse_args()
 numProcesses = int(options.numProcesses)
 timespan = ( int(options.timespan.split(",")[0]), int(options.timespan.split(",")[1]) )
 
+countries = ['US','CL']
+#~ countries = ['GB','IE']
+
 #get event urls
 if options.load_events:
 	with open('cache-events.pkl','rb')as inputfile: events = pickle.load(inputfile)	
 else:
-	events = sorted(get_events(timespan=timespan,trial=options.trial), key=itemgetter('time_e'))
+	events = sorted(get_events(timespan=timespan,countries=countries), key=itemgetter('time_e'))
 	with open('cache-events.pkl','wb') as outputfile: pickle.dump(events,outputfile,pickle.HIGHEST_PROTOCOL)
 	
 

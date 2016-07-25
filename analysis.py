@@ -7,7 +7,7 @@ import datetime
 import numpy as np
 import cPickle as pickle
 from sklearn import cross_validation
-from glob import glob
+from optparse import OptionParser
 
 from data_handle import Data_Handle
 from classifier import *
@@ -82,47 +82,69 @@ class Analysis():
 			x = np.array(features)
 			
 			c_ym  = analysis.clf.clfs['combi'].predict(x) 
-			p_ym,p_pm = analysis.clf.clfs['ptree'].predict_proba(x)
+			t_ym,t_pm = analysis.clf.clfs['ptree'].predict_proba(x)
+			k_ym,k_pm = analysis.clf.clfs['pknn'].predict_proba(x)
 			
 			c_ym[np.isnan(c_ym)] = 0
-			p_ym[np.isnan(p_ym)] = 0
-			p_pm[np.isnan(p_pm)] = 0
+			t_ym[np.isnan(t_ym)] = 0
+			t_pm[np.isnan(t_pm)] = 0
+			k_ym[np.isnan(k_ym)] = 0
+			k_pm[np.isnan(k_pm)] = 0
 			
-			array = np.array(zip(runner_names,c_ym,p_ym,p_pm),dtype=[('name','S30'),('c_ym',int),('p_ym',int),('p_pm',float)])
+			price = x[:,feature_names.index("last")]
 			
-			array[::-1].sort(order=['p_ym','p_pm'])
+			array = np.array(zip(runner_names,c_ym,t_ym,t_pm,k_ym,k_pm,price),dtype=[('name','S30'),('c_ym',int),('t_ym',int),('t_pm',float),('k_ym',int),('k_pm',float),('price',float)])
+						
+			#~ array[::-1].sort(order=['t_ym','t_pm'])	#reverse sort
+			array.sort(order=['price'])
 			
 			out =  'url:  %s\n\n' % link
-			out += '%s   %s  %s  %s\n' %(' '.ljust(20,' '), 'c','p','prob')
+			out += '%s   %s  %s         %s         %s\n' %(' '.ljust(20,' '), 'c','t','k','price')
 			for item in array:
-				out += '%s:  %d  %d  %.2f\n' % (item['name'][:20].ljust(20,' '),item['c_ym'],item['p_ym'],item['p_pm'])
+				out += '%s:  %d  %d (%.2f)  %d (%.2f)  %5.2f\n' % (item['name'][:20].ljust(20,' '),item['c_ym'],item['t_ym'],item['t_pm'],item['k_ym'],item['k_pm'],item['price'])
 			print out
 			
-			#~ embed()
+	def cross_validation(self):
+		
+		self.clf.cross_validation_clfs(self.x,self.y,self.xcontrol,num_cv=5)
 			
 def main():
 	print 'here starts main program'
 
+#parse options
+parser = OptionParser()
+parser.add_option("--cv", dest="cv", action="store_true", default=False,
+                  help="cross validate methods with dataset")
+(options, args) = parser.parse_args()
+
+#init analysis object
 analysis = Analysis()
-analysis.fit()
 
-#~ fnames = glob('Data/test/'+'*')
-#~ create_dummy_files(fnames)
+if options.cv:
+	#perform cross validation
+	analysis.cross_validation()
 
-#~ fnames = ['Data/new/data_2016-07-25_13:15:00_1.125773511.pkl']
-fnames = glob('Data/new/'+'*')
+else:
+	#get filenames
+	if len(args)<1:
+		raise NameError("Usage: %s /path_some_file")
+	else: fnames=args
 
-#load data from fnames
-dh = Data_Handle().cut_raw_data(fnames=fnames,analysis=True)
-linklist = dh.get_linklist()
-datalist = dh.get_datalist()
+	#train clf with existing data
+	analysis.fit()
 
-for i in xrange(len(datalist)):
+	#load event data from fnames
+	dh = Data_Handle().cut_raw_data(fnames=fnames,analysis=True)
+	linklist = dh.get_linklist()
+	datalist = dh.get_datalist()
 	
-	data = datalist[i]
-	link = linklist[i]
-	
-	analysis.predict(link,data)
+	#predict outcome events
+	for i in xrange(len(datalist)):
+		
+		data = datalist[i]
+		link = linklist[i]
+		
+		analysis.predict(link,data)
 
 
 
