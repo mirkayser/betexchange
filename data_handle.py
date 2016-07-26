@@ -167,11 +167,6 @@ class Data_Handle():
 
 class DataML():
 	
-	def __init__(self):
-		
-		#~ self.set_cut_pars(90,5,35)
-		self.set_cut_pars(70,5,15)
-	
 	def get_size(self):
 		return len(self.datalist)
 	
@@ -280,11 +275,12 @@ class DataML():
 					
 		return dic
 	
-	def get_lists(self,datalist,analysis=True,max_price=None):
+	def get_lists(self,datalist,analysis=True,max_price=None,cut_pars=[70,5,15]):
 		
 		print "\nloading features from event-arrays..."
 		
 		self.datalist = datalist
+		self.set_cut_pars(cut_pars[0],cut_pars[1],cut_pars[2],)
 		self.flist,self.rlist = self.split_arrays(datalist)
 		
 		rnames,fnames,fs,rs = [],[],[],[]

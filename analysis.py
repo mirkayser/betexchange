@@ -41,12 +41,13 @@ def create_dummy_files(fnames):
 
 class Analysis():
 	
-	def __init__(self,limit,max_price):
+	def __init__(self,limit,max_price,cut_pars):
 		
 		print 'fitting methods to dataset:\n'
 		
 		self.limit=float(limit)
 		self.max_price=float(max_price)
+		self.cut_pars=cut_pars
 		
 		#load datalist from file
 		datalist = Data_Handle().load_data().get_datalist()
@@ -55,7 +56,7 @@ class Analysis():
 		np.random.shuffle(datalist)
 		
 		#get lists (names,features,etc...)
-		runner_names,feature_names,features,result = DataML().get_lists(datalist,max_price=self.max_price)
+		runner_names,feature_names,features,result = DataML().get_lists(datalist,max_price=self.max_price,cut_pars=self.cut_pars)
 		
 		#prepare data for classifiers
 		self.x,self.y = prepareData(features,result,limit=self.limit)
@@ -76,7 +77,7 @@ class Analysis():
 		out = ''
 		
 		#get lists (names,features,etc...)
-		runner_names,feature_names,features,result = DataML().get_lists([data],max_price=self.max_price)	
+		runner_names,feature_names,features,result = DataML().get_lists([data],max_price=self.max_price,cut_pars=self.cut_pars)	
 		
 		#skip event if not enough data
 		if len(features)==0:
@@ -88,9 +89,9 @@ class Analysis():
 			#prepare data for classifiers
 			x = np.array(features)
 			
-			c_ym  = analysis.clf.clfs['combi'].predict(x) 
-			t_ym,t_pm = analysis.clf.clfs['ptree'].predict_proba(x)
-			k_ym,k_pm = analysis.clf.clfs['pknn'].predict_proba(x)
+			c_ym  = self.clf.clfs['combi'].predict(x) 
+			t_ym,t_pm = self.clf.clfs['ptree'].predict_proba(x)
+			k_ym,k_pm = self.clf.clfs['pknn'].predict_proba(x)
 			
 			c_ym[np.isnan(c_ym)] = 0
 			t_ym[np.isnan(t_ym)] = 0
@@ -126,58 +127,57 @@ class Analysis():
 def main():
 	print 'here starts main program'
 
-#parse options
-parser = OptionParser()
-parser.add_option("--cv", dest="cv", action="store_true", default=False,
-                  help="cross validate methods with dataset")
-(options, args) = parser.parse_args()
-
-#init analysis object
-analysis = Analysis(limit=0.0,max_price=5)
-
-if options.cv:
-	#perform cross validation
-	analysis.cross_validation()
-
-else:
-	#get filenames
-	if len(args)<1:
-		raise NameError("Usage: %s /path_some_file")
-	else: fnames=args
+	#parse options
+	parser = OptionParser()
+	parser.add_option("--cv", dest="cv", action="store_true", default=False,
+	                  help="cross validate methods with dataset")
+	(options, args) = parser.parse_args()
 	
-	#create dummy files for testing purpose
-	if fnames[0].split("/")[1]=='test':	create_dummy_files(fnames)
-
-	#train clf with existing data
-	analysis.fit()
-
-	#predict outcome events
-	print 'Predicting outcome events:\n'
-
-	#load event data from fnames
-	dh = Data_Handle().cut_raw_data(fnames=fnames,analysis=True)
-	linklist = dh.get_linklist()
-	datalist = dh.get_datalist()
+	#init analysis object
+	analysis = Analysis(limit=0.0,max_price=5,cut_pars=[70,5,15])
 	
-	outputs = []
-	for i in xrange(len(datalist)):
-		
-		data = datalist[i]
-		link = linklist[i]
-		
-		out = analysis.predict(link,data)
-		
-		if out!='': outputs.append(out)
+	if options.cv:
+		#perform cross validation
+		analysis.cross_validation()
 	
-	if len(outputs)>0:
-		print '\n\nEvents with prediction:\n'
-		for i,output in enumerate(outputs):
-			print 'event #%d:' % i
-			print output
+	else:
+		#get filenames
+		if len(args)<1:
+			raise NameError("Usage: %s /path_some_file")
+		else: fnames=args
+		
+		#create dummy files for testing purpose
+		if fnames[0].split("/")[1]=='test':	create_dummy_files(fnames)
+	
+		#train clf with existing data
+		analysis.fit()
+	
+		#predict outcome events
+		print 'Predicting outcome events:\n'
+	
+		#load event data from fnames
+		dh = Data_Handle().cut_raw_data(fnames=fnames,analysis=True)
+		linklist = dh.get_linklist()
+		datalist = dh.get_datalist()
+		
+		outputs = []
+		for i in xrange(len(datalist)):
 			
-		print  '%d of %d events with prediction' % (len(outputs),len(datalist))
+			data = datalist[i]
+			link = linklist[i]
+			
+			out = analysis.predict(link,data)
+			
+			if out!='': outputs.append(out)
+		
+		if len(outputs)>0:
+			print '\n\nEvents with prediction:\n'
+			for i,output in enumerate(outputs):
+				print 'event #%d:' % i
+				print output
+				
+			print  '%d of %d events with prediction' % (len(outputs),len(datalist))
 	
-	#~ embed()
-	
-	
+if __name__ == "__main__":
+    main()		
 

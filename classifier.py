@@ -18,6 +18,8 @@ np.set_printoptions(precision=3, threshold=50, linewidth=100)
 def prepareData(features,result,limit=0.1):
 	"""prepare samples for ml"""		
 	
+	limit=np.abs(limit)
+	
 	y=[]
 	for r in result:
 		if r>limit:			y.append(1)
@@ -264,15 +266,12 @@ class Classifier():
 		scores = self.cross_val_score(self.clfs['bknn'], x, y, num_cv=num_cv)
 		out += "B-KNN:	%0.2f (+/- %0.2f)\n" % (scores.mean(), scores.std() * 2)
 		
-		self.clfs['combi'].fit(x,y)
 		scores = self.cross_val_score(self.clfs['combi'], x, y, num_cv=num_cv)
 		out += "Combi:	%0.2f (+/- %0.2f) -> subset=%0.2f\n" % (scores.mean(),scores.std()*2,self.clfs['combi'].get_size_subset(xcontrol))
 
-		self.clfs['ptree'].fit(x,y)
 		scores = self.cross_val_score(self.clfs['ptree'], x, y, num_cv=num_cv)
 		out += "P-Tree:	%0.2f (+/- %0.2f) -> subset=%0.2f\n" % (scores.mean(),scores.std()*2,self.clfs['ptree'].get_size_subset(xcontrol))
 
-		self.clfs['pknn'].fit(x,y)
 		scores = self.cross_val_score(self.clfs['pknn'], x, y, num_cv=num_cv)
 		out += "P-KNN:	%0.2f (+/- %0.2f) -> subset=%0.2f\n" % (scores.mean(),scores.std()*2,self.clfs['pknn'].get_size_subset(xcontrol))
 		
@@ -298,7 +297,6 @@ class Classifier():
 		for k in sorted(self.clfs.keys()):
 			if not getattr(self.clfs[k],"score_values",None)==None:
 				
-				self.clfs[k].fit(x,y)
 				scores = self.cross_val_score_values(self.clfs[k], x, y, num_cv=num_cv)
 				out += "%s:	%0.2f (+/- %0.2f) -> subset=%0.2f\n" % (k,scores.mean(),scores.std()*2,self.clfs['combi'].get_size_subset_values(xcontrol))
 				
