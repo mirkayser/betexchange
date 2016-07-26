@@ -41,10 +41,11 @@ def create_dummy_files(fnames):
 
 class Analysis():
 	
-	def __init__(self,max_price):
+	def __init__(self,limit,max_price):
 		
 		print 'fitting methods to dataset:\n'
 		
+		self.limit=float(limit)
 		self.max_price=float(max_price)
 		
 		#load datalist from file
@@ -57,18 +58,18 @@ class Analysis():
 		runner_names,feature_names,features,result = DataML().get_lists(datalist,max_price=self.max_price)
 		
 		#prepare data for classifiers
-		self.x,self.y = prepareData(features,result,limit=0.1)
+		self.x,self.y = prepareData(features,result,limit=self.limit)
 		
 		#split in train and test samples (not random!!!)
 		self.xtrain,self.xcontrol,self.ytrain,self.ycontrol = cross_validation.train_test_split(self.x,self.y,test_size=0.2,random_state=42)
-		print 'Samples (max_price=%.1f):\ntrain: %d\ncontrol: %d\n' % (self.max_price,len(self.x),len(self.xcontrol))	
+		print 'Samples (limit=%.2f, max_price=%.1f):\ntrain: %d\ncontrol: %d\n' % (self.limit,self.max_price,len(self.x),len(self.xcontrol))	
 		
 		self.clf = Classifier()
 
 	def fit(self):
 	
 		self.clf.fit(self.xtrain,self.ytrain)
-		self.clf.performance(self.xcontrol,self.ycontrol)
+		self.clf.performance_values(self.xcontrol,self.ycontrol)
 
 	def predict(self,link,data,verbose=True):			
 		
@@ -120,7 +121,7 @@ class Analysis():
 			
 	def cross_validation(self):
 		
-		self.clf.cross_validation_clfs(self.x,self.y,self.xcontrol,num_cv=5)
+		self.clf.cross_validation_clfs_values(self.x,self.y,self.xcontrol,num_cv=5)
 			
 def main():
 	print 'here starts main program'
@@ -132,7 +133,7 @@ parser.add_option("--cv", dest="cv", action="store_true", default=False,
 (options, args) = parser.parse_args()
 
 #init analysis object
-analysis = Analysis(max_price=5)
+analysis = Analysis(limit=0.0,max_price=5)
 
 if options.cv:
 	#perform cross validation

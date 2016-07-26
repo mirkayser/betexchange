@@ -92,7 +92,38 @@ class CombiCLF():
 		ym = ym[np.isnan(ym)==False]
 		
 		return len(ym)/float(len(x))
+		
+	def score_values(self,x,y):
+		
+		"""clf score ignoring results==class 0"""
+		
+		if not self.trained: raise ValueError('CLF not trained, run self.fit()')
+		
+		ym = self.predict(x)
+		
+		mask = (np.isnan(ym)==False) & (ym!=0) 
+		ym= ym[mask]
+		y = y[mask]
+		
+		if len(ym)==0:
+			s=np.nan		
+		else:
+			s = len(ym[ym==y])/float(len(ym))
+		
+		return s
 
+	def get_size_subset_values(self,x):
+
+		"""clf subset ignoring results==class 0"""
+
+		if not self.trained: raise ValueError('CLF not trained, run self.fit()')
+		
+		ym = self.predict(x)
+		mask = (np.isnan(ym)==False) & (ym!=0)
+		ym = ym[mask]
+		
+		return len(ym)/float(len(x))
+		
 class HighProb():
 	
 	def __init__(self,clf,p):
@@ -165,6 +196,37 @@ class HighProb():
 		
 		return len(ym)/float(len(x))
 
+	def score_values(self,x,y):
+		
+		"""clf score ignoring results==class 0"""
+		
+		if not self.trained: raise ValueError('CLF not trained, run self.fit()')
+		
+		ym = self.predict(x)
+		
+		mask = (np.isnan(ym)==False) & (ym!=0) 
+		ym= ym[mask]
+		y = y[mask]
+		
+		if len(ym)==0:
+			s=np.nan		
+		else:
+			s = len(ym[ym==y])/float(len(ym))
+		
+		return s
+
+	def get_size_subset_values(self,x):
+
+		"""clf subset ignoring results==class 0"""
+
+		if not self.trained: raise ValueError('CLF not trained, run self.fit()')
+		
+		ym = self.predict(x)
+		mask = (np.isnan(ym)==False) & (ym!=0)
+		ym = ym[mask]
+		
+		return len(ym)/float(len(x))
+
 class Classifier():
 	
 	def __init__(self):	
@@ -229,6 +291,32 @@ class Classifier():
 		scores=np.array(scores)
 		return scores	
 
+	def cross_validation_clfs_values(self,x,y,xcontrol,num_cv=5):
+		
+		out = 'cross validation algorithms (cv=%d): (ignore results==0)\n' % num_cv
+
+		for k in sorted(self.clfs.keys()):
+			if not getattr(self.clfs[k],"score_values",None)==None:
+				
+				self.clfs[k].fit(x,y)
+				scores = self.cross_val_score_values(self.clfs[k], x, y, num_cv=num_cv)
+				out += "%s:	%0.2f (+/- %0.2f) -> subset=%0.2f\n" % (k,scores.mean(),scores.std()*2,self.clfs['combi'].get_size_subset_values(xcontrol))
+				
+		print out
+		
+	def cross_val_score_values(self,clf,x,y,num_cv=5):
+		"""cross validation using k-fold"""
+		
+		from sklearn.cross_validation import KFold
+		
+		scores=[]
+		kf = KFold(len(x), n_folds=num_cv)
+		for train, test in kf:
+			clf.fit(x[train],y[train])
+			scores.append( clf.score_values(x[test],y[test]) )
+		scores=np.array(scores)
+		return scores	
+
 	def fit(self,x,y):
 		
 		for k in self.clfs.keys():
@@ -267,18 +355,29 @@ class Classifier():
 
 		print out		
 		
+	def performance_values(self,x,y):
+		
+		"""calculate clf performance ignoring results==0"""
+		
+		if not self.trained: raise ValueError('CLF not trained, run self.fit()')
+		
+		out = 'performance algorithms (ignoring result==0):\n'
+		for k in sorted(self.clfs.keys()):
+			if not getattr(self.clfs[k],"score_values",None)==None:
+				out += "%s:	%0.2f -> subset=%0.2f\n" % (k,self.clfs[k].score_values(x,y),self.clfs[k].get_size_subset_values(x))
+		print out		
 			
 def main():
 	print ''
-
+	
 	#load datalist from file
-	datalist = Data_Handle(load=1).get_datalist()
+	datalist = Data_Handle().load_data().get_datalist()
 	
 	#randomize sample
 	np.random.shuffle(datalist)
 	
 	#get lists (names,features,etc...)
-	runner_names,feature_names,features,result = DataML().get_lists(datalist)
+	runner_names,feature_names,features,result = DataML().get_lists(datalist,max_price=5.)
 	
 	#prepare data for classifiers
 	x,y = prepareData(features,result,limit=0.1)
@@ -288,9 +387,17 @@ def main():
 	print 'Samples:\ntrain: %d\ncontrol: %d\n' % (len(x),len(xcontrol))	
 	
 	clf = Classifier()
+	clf.fit(xtrain,ytrain)
+	
+	#performance total
 	clf.cross_validation_clfs(xtrain,ytrain,xcontrol,num_cv=5)
 	clf.fit(xtrain,ytrain)
 	clf.performance(xcontrol,ycontrol)
+	
+	#performance values
+	clf.cross_validation_clfs_values(xtrain,ytrain,xcontrol,num_cv=5)
+	clf.fit(xtrain,ytrain)
+	clf.performance_values(xcontrol,ycontrol)
 		
 		
 if __name__ == "__main__":
