@@ -11,6 +11,8 @@ import matplotlib.pyplot as mp
 import matplotlib.gridspec as gridspec
 from glob import glob
 
+from pyik.performance import cached
+
 np.set_printoptions(precision=3, threshold=300, linewidth=100)
 
 class Data_Handle():
@@ -118,9 +120,10 @@ class Data_Handle():
 		
 		return self
 
-	def load_data(self):
+	@cached
+	def load_data(self,verbose=True):
 		self.datalist = np.load(self.fname)
-		print '%d events read from %s\n' % (self.get_size(),self.fname)
+		if verbose: print '%d events read from %s\n' % (self.get_size(),self.fname)
 		
 		return self
 
@@ -158,7 +161,7 @@ class Data_Handle():
 
 	def get_event(self,eid):
 		return self.datalist[eid]
-		
+	
 	def get_datalist(self):
 		return self.datalist
 
@@ -275,17 +278,16 @@ class DataML():
 					
 		return dic
 	
-	def get_lists(self,datalist,analysis=True,max_price=None,cut_pars=[70,5,15]):
+	def get_lists(self,datalist,analysis=True,max_price=None,cut_pars=[70,5,15],verbose=True):
 		
-		print "\nloading features from event-arrays..."
+		if verbose: print "loading features from event-arrays..."
 		
 		self.datalist = datalist
 		self.set_cut_pars(cut_pars[0],cut_pars[1],cut_pars[2],)
 		self.flist,self.rlist = self.split_arrays(datalist)
 		
 		rnames,fnames,fs,rs = [],[],[],[]
-		bar = progressbar.ProgressBar()
-		for eid in bar(xrange(self.get_size())):
+		for eid in xrange(self.get_size()):
 			
 			a = self.datalist[eid]
 			
@@ -307,7 +309,7 @@ class DataML():
 				
 				rnames.append(self.get_runner_name(eid,rid))
 		
-		print '%d runners in data' % len(fs) 
+		if verbose: print '%d runners in data' % len(fs) 
 		
 		self.rnames = rnames
 		self.fnames = sorted(f.keys())

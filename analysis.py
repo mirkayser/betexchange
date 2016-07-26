@@ -41,29 +41,30 @@ def create_dummy_files(fnames):
 
 class Analysis():
 	
-	def __init__(self,limit,max_price,cut_pars):
+	def __init__(self,limit,max_price,cut_pars,verbose=True):
 		
-		print 'fitting methods to dataset:\n'
+		if verbose: print 'fitting methods to dataset:\n'
 		
 		self.limit=float(limit)
 		self.max_price=float(max_price)
 		self.cut_pars=cut_pars
 		
 		#load datalist from file
-		datalist = Data_Handle().load_data().get_datalist()
+		datalist = Data_Handle().load_data(verbose=verbose).get_datalist()
 		
-		#randomize sample
-		np.random.shuffle(datalist)
+		#~ #randomize sample
+		#~ np.random.shuffle(datalist)
 		
 		#get lists (names,features,etc...)
-		runner_names,feature_names,features,result = DataML().get_lists(datalist,max_price=self.max_price,cut_pars=self.cut_pars)
+		runner_names,feature_names,features,result = DataML().get_lists(datalist,max_price=self.max_price,cut_pars=self.cut_pars,verbose=verbose)
 		
 		#prepare data for classifiers
 		self.x,self.y = prepareData(features,result,limit=self.limit)
 		
 		#split in train and test samples (not random!!!)
 		self.xtrain,self.xcontrol,self.ytrain,self.ycontrol = cross_validation.train_test_split(self.x,self.y,test_size=0.2,random_state=42)
-		print 'Samples (limit=%.2f, max_price=%.1f):\ntrain: %d\ncontrol: %d\n' % (self.limit,self.max_price,len(self.x),len(self.xcontrol))	
+		if verbose:
+			print '\nSamples (limit=%.2f, max_price=%.1f):\ntrain: %d\ncontrol: %d\n' % (self.limit,self.max_price,len(self.x),len(self.xcontrol))	
 		
 		self.clf = Classifier()
 
