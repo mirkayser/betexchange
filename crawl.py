@@ -34,19 +34,28 @@ def get_events(timespan=(90,150),countries=None):
 	
 	#select races from specified countries
 	else:
-		cs = spider.driver.find_elements_by_xpath('//div[@class="venue-event-list expandable"]')
+		
+		cs = spider.driver.find_elements_by_xpath('//span[@class="country-code"]')
+		
 		races = []
 		for cou in countries:
 			for c in cs:
+				
 				if c.get_attribute("rel")==cou:
-					elems = c.find_elements_by_xpath('./div/div/div/div/div/span/a')
-					for elem in elems:
-						races.append(elem)
+					
+					mod = c.find_element_by_xpath('./../../../..')
+					tags = mod.find_elements_by_xpath("./div/div/div/div/div/div/span/a")
+					
+					for tag in tags:
+						races.append( (cou,tag) )
 	
 	if len(races)>0:
 		bar = progressbar.ProgressBar()	
-		for r in bar(races):
-			dic={}
+		for item in bar(races):
+			
+			r = item[1] 
+			
+			dic={ 'country':item[0] }
 			dic['link']=r.get_attribute('href')
 			if dic['link'][-1]!='#':
 				
@@ -94,7 +103,9 @@ class ScrapeEvent():
 		self.spider.get_url(self.data['link'])
 
 		self.fname = 'data_'+str(self.data['time_e']).replace(" ","_")+'_'+self.data['link'].split("/")[-1]+'.pkl'
-
+		
+		self.data['last_get'] = datetime.datetime(1999,1,1)
+		
 	def get_status(self):
 		
 		if not self.data.has_key('status'):	self.data['status'] = 'before'
@@ -170,6 +181,8 @@ class ScrapeEvent():
 			time  = datetime.datetime.now()
 			
 			self.data['data'][name].append( (time,price) )
+			
+		self.data['last_get'] = datetime.datetime.now()
 
 	def load_data(self,dirnm):
 		
@@ -237,7 +250,7 @@ def get_event_schedule(events):
 	a = np.array(zip(names,a_times,e_times),dtype=[('name','S100'),('a_time',object),('e_time',object)])
 	a.sort(order=['e_time'])	
 		
-	output = 'Schedule Races:\n'
+	output = '\nSchedule Races:\n'
 	for e in a:
 		
 		a_time = e['a_time'].strftime("%m-%d %H:%M")	
@@ -249,9 +262,11 @@ def get_event_schedule(events):
 		textfile.write(output)
 	print output	
 	
+	return np.array(e_times)
+	
 def scrape_events(etuple):
 
-	run=etuple[0]
+	run_paralel=etuple[0]
 	events=etuple[1]
 	
 	if len(events)>15: events = events[:15]
@@ -259,8 +274,9 @@ def scrape_events(etuple):
 	dirnm="Data/new/"
 	
 	#schedule events, start analysis/event
-	get_event_schedule(events)
+	e_times = get_event_schedule(events)
 	
+	run=1	
 	finished = np.zeros_like(events)
 	while len(finished[finished==0])>0:
 		
@@ -268,7 +284,8 @@ def scrape_events(etuple):
 		
 		for i in xrange(len(events)):
 			
-			if finished[i]==1: continue
+			#skip finished
+			if finished[i]==1: continue		
 			
 			output=''
 
@@ -281,6 +298,23 @@ def scrape_events(etuple):
 				
 				#check if event has finished
 				event.get_status()
+
+				#artificial delay if datataking too fast
+				#check if data has been taken within the last minutes
+				diff = np.abs( (event.data['last_get'] - datetime.datetime.now()).total_seconds() )
+				if diff < datetime.timedelta(minutes=5).total_seconds(): 
+					
+					#if no event within 30 minutes of start -> go to sleep
+					if np.all( e_times[finished==0] - datetime.datetime.now() ) > datetime.timedelta(minutes=30):
+						sleep = int(datetime.timedelta(minutes=5).total_seconds() - diff)
+						print 'waiting for %d seconds:' % sleep
+						bar = progressbar.ProgressBar()
+						for i in bar(xrange(sleep)):
+							time.sleep(i)										
+					#else only skip this event
+					else: 
+						print 'skipping event (last_get=%d)' % diff
+						continue
 				
 				#if event has finished, take it out of loop, else add datapoint for ongoing event
 				if event.data['status']=='finished':
@@ -306,12 +340,13 @@ def scrape_events(etuple):
 				event.close()
 			
 			except:
-				output+= '\n--WARNING: event skipped (%s)\n%s' % (events[i]['link'],sys.exc_info()[:2])
+				output+= '\n  --WARNING: scrape event failed (%s)\n    %s' % (events[i]['link'],sys.exc_info()[:2])
 				finished[i] = 1
 			
 			output+='\n  --%s' % finished
 			print output
-
+			
+			run+=1
 		
 def main():
 	print 'here starts main program'
@@ -328,8 +363,8 @@ parser.add_option("-t", "--timespan", dest="timespan", default='70,100',
 numProcesses = int(options.numProcesses)
 timespan = ( int(options.timespan.split(",")[0]), int(options.timespan.split(",")[1]) )
 
-countries = ['US','CL']
-#~ countries = ['GB','IE']
+#~ countries = ['US','CL']
+countries = ['GB','IE']
 
 #get event urls
 if options.load_events:
