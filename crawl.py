@@ -313,7 +313,7 @@ def scrape_events(etuple):
 							print 'sleeping %d seconds:' % sleep
 							bar = progressbar.ProgressBar()
 							for i in bar(xrange(sleep)):
-								time.sleep(i)										
+								time.sleep(1)										
 						#else only skip this event
 						else: 
 							print 'skipping event (last_get=%d)' % diff
