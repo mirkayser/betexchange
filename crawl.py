@@ -307,7 +307,7 @@ def scrape_events(etuple):
 					#if no event within 30 minutes of start -> go to sleep
 					if np.all( e_times[finished==0] - datetime.datetime.now() ) > datetime.timedelta(minutes=30):
 						sleep = int(datetime.timedelta(minutes=5).total_seconds() - diff)
-						print 'waiting for %d seconds:' % sleep
+						print 'sleeping %d seconds:' % sleep
 						bar = progressbar.ProgressBar()
 						for i in bar(xrange(sleep)):
 							time.sleep(i)										
@@ -346,7 +346,7 @@ def scrape_events(etuple):
 			output+='\n  --%s' % finished
 			print output
 			
-			run+=1
+		run+=1
 		
 def main():
 	print 'here starts main program'
