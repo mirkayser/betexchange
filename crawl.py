@@ -300,21 +300,24 @@ def scrape_events(etuple):
 				event.get_status()
 
 				#artificial delay if datataking too fast
-				#check if data has been taken within the last minutes
-				diff = np.abs( (event.data['last_get'] - datetime.datetime.now()).total_seconds() )
-				if diff < datetime.timedelta(minutes=5).total_seconds(): 
-					
-					#if no event within 30 minutes of start -> go to sleep
-					if np.all( e_times[finished==0] - datetime.datetime.now() ) > datetime.timedelta(minutes=30):
-						sleep = int(datetime.timedelta(minutes=5).total_seconds() - diff)
-						print 'sleeping %d seconds:' % sleep
-						bar = progressbar.ProgressBar()
-						for i in bar(xrange(sleep)):
-							time.sleep(i)										
-					#else only skip this event
-					else: 
-						print 'skipping event (last_get=%d)' % diff
-						continue
+				#if event does NOT terminate within 30 minutes
+				if ( event.data['time_e'] - datetime.datetime.now() ) > datetime.timedelta(minutes=30):
+				
+					#check if data has been taken within the last minutes
+					diff = np.abs( (event.data['last_get'] - datetime.datetime.now()).total_seconds() )
+					if diff < datetime.timedelta(minutes=5).total_seconds(): 
+						
+						#if no event within 30 minutes of start -> go to sleep
+						if np.all( e_times[finished==0] - datetime.datetime.now() ) > datetime.timedelta(minutes=30):
+							sleep = int(datetime.timedelta(minutes=5).total_seconds() - diff)
+							print 'sleeping %d seconds:' % sleep
+							bar = progressbar.ProgressBar()
+							for i in bar(xrange(sleep)):
+								time.sleep(i)										
+						#else only skip this event
+						else: 
+							print 'skipping event (last_get=%d)' % diff
+							continue
 				
 				#if event has finished, take it out of loop, else add datapoint for ongoing event
 				if event.data['status']=='finished':
