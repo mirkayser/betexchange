@@ -245,7 +245,7 @@ def get_event_schedule(events):
 	for e in events:
 		names.append(e['link'])
 		e_times.append(e['time_e'])
-		a_times.append( e['time_e'] - datetime.timedelta(minutes=35) )
+		a_times.append( e['time_e'] - datetime.timedelta(minutes=25) )
 	
 	a = np.array(zip(names,a_times,e_times),dtype=[('name','S100'),('a_time',object),('e_time',object)])
 	a.sort(order=['e_time'])	
@@ -309,35 +309,37 @@ def scrape_events(events):
 							sleep = int(datetime.timedelta(minutes=5).total_seconds() - diff)
 							print '\nsleeping %d seconds: %s' % (sleep,e_times[finished==0] - datetime.datetime.now())
 							bar = progressbar.ProgressBar()
-							for i in bar(xrange(sleep)):
+							for sec in bar(xrange(sleep)):
 								time.sleep(1)										
 						#else only skip this event
 						else: 
 							print '\nskipping event (last_get=%.1f)' % (diff/60.)
-
-				else:
-					
-					#if event has finished, take it out of loop, else add datapoint for ongoing event
-					if event.data['status']=='finished':
-						output+='\n  --race finished'
-						finished[i] = 1
-					elif event.data['status']=='suspended':
-						output+='\n  --suspended'
-					else:	
-						event.add_data()
-					
-					diff = (event.data['time_e'] - datetime.datetime.now())
-					num_runners = len(event.data['data'].keys())
-					num_datapoints = len(event.data['data'][event.data['data'].keys()[0]])
-					output+= '\n  Run %i, Scrape %i:  %s  (%s)' % (run,i+1,event.data['name'],event.data['link'])
-					output+= '\n  start in %s  (%d datapoints, %d runners)' % (str(diff),num_datapoints,num_runners)
-					
-					#save copy for analysis
-					if datetime.timedelta(minutes=25) > diff:
-						event.save_data(dirnm='Data/prediction/')
-					
-					#save data
-					event.save_data(dirnm=dirnm)				
+							
+							#close event
+							event.close()
+							continue
+												
+				#if event has finished, take it out of loop, else add datapoint for ongoing event
+				if event.data['status']=='finished':
+					output+='\n  --race finished'
+					finished[i] = 1
+				elif event.data['status']=='suspended':
+					output+='\n  --suspended'
+				else:	
+					event.add_data()
+				
+				diff = (event.data['time_e'] - datetime.datetime.now())
+				num_runners = len(event.data['data'].keys())
+				num_datapoints = len(event.data['data'][event.data['data'].keys()[0]])
+				output+= '\n  Run %i, Scrape %i:  %s  (%s)' % (run,i+1,event.data['name'],event.data['link'])
+				output+= '\n  start in %s  (%d datapoints, %d runners)' % (str(diff),num_datapoints,num_runners)
+				
+				#save copy for analysis
+				if datetime.timedelta(minutes=35) > diff:
+					event.save_data(dirnm='Data/prediction/')
+				
+				#save data
+				event.save_data(dirnm=dirnm)				
 				
 				#close event
 				event.close()

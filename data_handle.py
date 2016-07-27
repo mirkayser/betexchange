@@ -17,9 +17,9 @@ np.set_printoptions(precision=3, threshold=300, linewidth=100)
 
 class Data_Handle():
 	
-	def __init__(self,timeunit=60):
+	def __init__(self,fname='Data/data.npy',timeunit=60):
 		
-		self.fname = 'Data/data.npy'
+		self.fname = fname
 		self.timeunit=float(timeunit)
 		
 	def cut_raw_data(self,fnames,analysis=True,remove=False):
