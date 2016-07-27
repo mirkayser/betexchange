@@ -9,7 +9,7 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as mp
 import matplotlib.gridspec as gridspec
-from glob import glob
+from optparse import OptionParser
 
 from pyik.performance import cached
 
@@ -321,14 +321,19 @@ class DataML():
 def main():
 	print 'here starts main program'
 
-	from my.tools import Timer
-	timer=Timer()
+	#parse options
+	parser = OptionParser()
+	parser.add_option("--remove", dest="remove", action="store_true", default=False,
+	                  help="remove invalid raw data")
+	(options, args) = parser.parse_args()
+
+	#get filenames
+	if len(args)<1:
+		raise NameError("Usage: %s /path_some_file")
+	else: fnames=args
 	
-	fnames = glob('Data/raw/'+'*')
-			
-	d = Data_Handle().cut_raw_data(fnames=fnames,analysis=False,remove=False)
-	
-	timer.stop()
+	#read/cut raw data		
+	d = Data_Handle().cut_raw_data(fnames=fnames,analysis=False,remove=options.remove)
 
 if __name__ == "__main__":
     main()
