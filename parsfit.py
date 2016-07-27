@@ -5,9 +5,9 @@
 from IPython import embed
 
 import numpy as np
+import cPickle as pickle
 from analysis import Analysis
-
-from my.tools import Timer
+from my.tools import Timer,poolmap
 
 np.set_printoptions(precision=3, threshold=50, linewidth=100)		
 
@@ -30,7 +30,7 @@ class ParsFit(object):
 	
 	def __call__(self, par):
 		
-		score,subset = self.model(par,verbose=True)
+		score,subset = self.model(par)
 		
 		subset*=2
 		result = -(score+subset)
@@ -66,6 +66,7 @@ class ParsFit(object):
 		m.SetMaximumEvaluations(max_evaluations)
 		m.SetMaximumTime(max_time)
 		
+		self.starts = starts
 		self.pars = m(self, starts)
 		self.result = self(self.pars)
 		self.score,self.subset = self.model(self.pars)
@@ -74,29 +75,57 @@ class ParsFit(object):
 
 	def __repr__(self):
 		
-		out = 'score=%.2f, subset=%.2f\npars=' % (self.score,self.subset)
-		for i in xrange(len(pars)):
-			if i==0: 							out += '[%s,' % pars[i]
-			elif i==len(pars)-1: 	out += '%s]' % pars[i]
-			else:									out += '%s,' % pars[i]
+		out = 'starts=%s\npars  =%s\n' %(self.starts,self.pars) 
+		out += 'score=%.2f, subset=%.2f\n' % (self.score,self.subset)
 		return out
 
+def export_pars(fits):
+	
+	fname = 'parameters_analysis.pkl'
+	
+	pars = []
+	for i,fit in enumerate(fits):
+		pars.append(fit.pars)
+	with open(fname,'wb') as outputfile:
+		pickle.dump(pars,outputfile,pickle.HIGHEST_PROTOCOL)
+	print '%s parameter sets written to %s' % (len(fits),fname)
+
+def get_parsfits(args):
+	
+	starts,lb,ub = args
+	
+	fit = ParsFit()
+	pars,result = fit.Minimize(starts,lower_bounds=lb, upper_bounds=ub,method='BOBYQA')
+	score,subset= fit.score,fit.subset
+	
+	print fit
+	
+	return fit
+	
 def main():
 	print 'here starts main program'
 
-
-pars = [ [0.2,70.0,3.0,24.0], #score=0.84, subset=0.19
-				 [0.1,70.0,3.9,23.5], #score=0.80, subset=0.28
-				 [0.0,70.0,4.0,23.9]  #score=0.82, subset=0.58
+#parameters for unparallel fit
+pars = [ 	[  0.22,     7.0e+01,4.0e+00,2.4e+01], #score=0.81, subset=0.19
+					[  0.113,  	 7.0e+01,4.0e+00,2.4e+01], #score=0.78, subset=0.23
+					[  2.500e-02,7.0e+01,4.0e+00,2.4e+01], #score=0.78, subset=0.38
+					[  1.330e-02,7.0e+01,4.0e+00,2.4e+01]  #score=0.79, subset=0.45				 
 				]
 
-lb = [0.0,69, 3,23]
-ub = [0.3,70, 5,25]
+lb = [0.0,70, 4,24]
+ub = [0.3,70, 4,24]
 
-starts = [.0,70, 4,24]
 
-fit = ParsFit()
-pars,result = fit.Minimize(starts,lower_bounds=lb, upper_bounds=ub,method='BOBYQA')
-score,subset= fit.score,fit.subset
+#parallelfit
+args = [ [ pars[0],[0.2,  70, 4,24],ub ],  #score=0.84, subset=0.19
+				 [ pars[1],[0.1,  70, 4,24],ub ],  #score=0.80, subset=0.28
+				 [ pars[2],[0.025,70, 4,24],ub ],  #score=0.82, subset=0.58
+				 [ pars[3],[0.01, 70, 4,24],ub ]  
+				]
 
-print '\n',fit
+fits = poolmap(get_parsfits,args,numProcesses=2)
+
+export_pars(fits)
+	
+	
+
