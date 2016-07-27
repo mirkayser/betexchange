@@ -124,7 +124,7 @@ class Analysis():
 			else:
 				print '  WARNING: no prediction possible (%s)\n' % link
 				
-			return out  
+		return out  
 			
 	def cross_validation(self):
 		

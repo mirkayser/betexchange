@@ -361,7 +361,7 @@ def main():
 parser = OptionParser()
 parser.add_option("-l", "--load-events", dest="load_events", action="store_true", default=False,
                   help="load event list from file (events.pkl)")
-parser.add_option("-t", "--timespan", dest="timespan", default='70,100',
+parser.add_option("-t", "--timespan", dest="timespan", default='70,105',
                   help="specifies range in time from where to select events")
 
 (options, args) = parser.parse_args()
