@@ -120,7 +120,6 @@ class Data_Handle():
 		
 		return self
 
-	@cached
 	def load_data(self,verbose=True):
 		self.datalist = np.load(self.fname)
 		if verbose: print '%d events read from %s\n' % (self.get_size(),self.fname)
@@ -280,7 +279,7 @@ class DataML():
 	
 	def get_lists(self,datalist,analysis=True,max_price=None,cut_pars=[70,5,15],verbose=True):
 		
-		if verbose: print "loading features from event-arrays..."
+		if verbose: print "  loading features from event-arrays..."
 		
 		self.datalist = datalist
 		self.set_cut_pars(cut_pars[0],cut_pars[1],cut_pars[2],)
@@ -309,7 +308,7 @@ class DataML():
 				
 				rnames.append(self.get_runner_name(eid,rid))
 		
-		if verbose: print '%d runners in data' % len(fs) 
+		if verbose: print '  %d runners in data\n' % len(fs) 
 		
 		self.rnames = rnames
 		self.fnames = sorted(f.keys())

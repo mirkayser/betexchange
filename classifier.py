@@ -292,13 +292,13 @@ class Classifier():
 
 	def cross_validation_clfs_values(self,x,y,num_cv=5):
 		
-		out = 'cross validation algorithms (cv=%d): (ignore results==0)\n' % num_cv
+		out = '  cross validation algorithms (cv=%d): (ignore results==0)\n' % num_cv
 
 		for k in sorted(self.clfs.keys()):
 			if not getattr(self.clfs[k],"score_values",None)==None:
 				
 				scores = self.cross_val_score_values(self.clfs[k], x, y, num_cv=num_cv)
-				out += "%s:	%0.2f (+/- %0.2f) -> subset=%0.2f\n" % (k,scores.mean(),scores.std()*2,self.clfs[k].get_size_subset_values(x))
+				out += "  %s:  %0.2f (+/- %0.2f) -> subset=%0.2f\n" % (k.ljust(5,' '),scores.mean(),scores.std()*2,self.clfs[k].get_size_subset_values(x))
 				
 		print out
 		
@@ -359,11 +359,14 @@ class Classifier():
 		
 		if not self.trained: raise ValueError('CLF not trained, run self.fit()')
 		
-		out = 'performance algorithms (ignoring result==0):\n'
+		out = '  performance algorithms (ignoring result==0):\n'
 		for k in sorted(self.clfs.keys()):
 			if not getattr(self.clfs[k],"score_values",None)==None:
-				out += "%s:	%0.2f -> subset=%0.2f\n" % (k,self.clfs[k].score_values(x,y),self.clfs[k].get_size_subset_values(x))
+				out += "  %s:	%0.2f -> subset=%0.2f\n" % (k.ljust(5,' '),self.clfs[k].score_values(x,y),self.clfs[k].get_size_subset_values(x))
+		out+='\n'
 		print out		
+		
+		return out
 			
 def main():
 	print ''

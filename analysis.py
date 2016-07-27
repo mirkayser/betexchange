@@ -43,8 +43,9 @@ class Analysis():
 	
 	def __init__(self,limit,max_price,cut_pars,verbose=True):
 		
-		if verbose: print 'fitting methods to dataset:\n'
-		
+		if verbose: 
+			print 'fitting methods to dataset:\nlimit=%.2E, cut_pars=%s\n' % (limit,cut_pars)
+			
 		self.limit=float(limit)
 		self.max_price=float(max_price)
 		self.cut_pars=cut_pars
@@ -64,15 +65,19 @@ class Analysis():
 		#split in train and test samples (not random!!!)
 		self.xtrain,self.xcontrol,self.ytrain,self.ycontrol = cross_validation.train_test_split(self.x,self.y,test_size=0.2,random_state=42)
 		if verbose:
-			print '\nSamples (limit=%.2f, max_price=%.1f):\ntrain: %d\ncontrol: %d\n' % (self.limit,self.max_price,len(self.x),len(self.xcontrol))	
+			print '  Samples (limit=%.2f, max_price=%.1f):\n  train: %d\n  control: %d\n' % (self.limit,self.max_price,len(self.x),len(self.xcontrol))	
 		
 		self.clf = Classifier()
 
 	def fit(self):
 	
 		self.clf.fit(self.xtrain,self.ytrain)
-		self.clf.performance_values(self.xcontrol,self.ycontrol)
-
+		
+	def performance(self):
+		
+		out = self.clf.performance_values(self.xcontrol,self.ycontrol)
+		return out
+		
 	def predict(self,link,data,verbose=True):			
 		
 		out = ''
@@ -82,7 +87,7 @@ class Analysis():
 		
 		#skip event if not enough data
 		if len(features)==0:
-			print 'WARNING: not enough usable data to predict event\n'
+			print '  WARNING: not enough usable data to predict event\n'
 					
 		#classification
 		else:
@@ -111,19 +116,24 @@ class Analysis():
 				array.sort(order=['price'])
 				
 				#output succesful prediction
-				out += 'url:  %s\n' % link
-				out += '%s    %s   %s          %s          %s\n' %(' '.ljust(20,' '), 'c','t','k','price')
+				out += '  url:  %s\n' % link
+				out += '  %s    %s   %s          %s          %s\n' %(' '.ljust(20,' '), 'c','t','k','price')
 				for item in array:
-					out += '%s:  %2d  %2d (%.2f)  %2d (%.2f)   %5.2f\n' % (item['name'][:20].ljust(20,' '),item['c_ym'],item['t_ym'],item['t_pm'],item['k_ym'],item['k_pm'],item['price'])
+					out += '  %s:  %2d  %2d (%.2f)  %2d (%.2f)   %5.2f\n' % (item['name'][:20].ljust(20,' '),item['c_ym'],item['t_ym'],item['t_pm'],item['k_ym'],item['k_pm'],item['price'])
 			
 			else:
-				print 'WARNING: no prediction possible (%s)\n' % link
+				print '  WARNING: no prediction possible (%s)\n' % link
 				
 			return out  
 			
 	def cross_validation(self):
 		
 		self.clf.cross_validation_clfs_values(self.xtrain,self.ytrain,num_cv=5)
+
+def load_pars(fname = 'parameters_analysis.pkl'):	
+	with open(fname,'rb')as inputfile: 
+		pars = pickle.load(inputfile)
+	return pars
 			
 def main():
 	print 'here starts main program'
@@ -133,67 +143,64 @@ def main():
 	parser.add_option("--cv", dest="cv", action="store_true", default=False,
 	                  help="cross validate methods with dataset")
 	(options, args) = parser.parse_args()
+
+	#load parameters
+	pars = load_pars()
 	
-	#parameter definition
-	pars = [ [0.2,70.0,3.0,24.0], #score=0.84, subset=0.19
-					 [0.1,70.0,3.9,23.5], #score=0.80, subset=0.28
-					 [0.0,70.0,4.0,23.9]  #score=0.82, subset=0.58
-					]	
+	#~ pars = pars[2:]
 	
-	par=pars[2]
-	
-	#init analysis object
-	analysis = Analysis(limit=par[0],max_price=5,cut_pars=par[1:])
-	
-	if options.cv:
-		#perform cross validation
-		analysis.cross_validation()
+	output='\n\nResult:\n\n'	
+	for par in pars:	
 		
-		a = analysis
-		scores = a.clf.cross_val_score_values(a.clf.clfs['ptree'], a.xtrain, a.ytrain, num_cv=5)
-		score  = scores.mean()
-		subset = a.clf.clfs['ptree'].get_size_subset_values(a.xtrain)
+		#init analysis object
+		analysis = Analysis(limit=par[0],max_price=5,cut_pars=par[1:])
 		
-		print 'score=%.2f, subset=%.2f  pars: %s' % (score,subset,str(par))
-	
-	else:
-		#get filenames
-		if len(args)<1:
-			raise NameError("Usage: %s /path_some_file")
-		else: fnames=args
-		
-		#create dummy files for testing purpose
-		if fnames[0].split("/")[1]=='test':	create_dummy_files(fnames)
-	
-		#train clf with existing data
-		analysis.fit()
-	
-		#predict outcome events
-		print 'Predicting outcome events:\n'
-	
-		#load event data from fnames
-		dh = Data_Handle().cut_raw_data(fnames=fnames,analysis=True)
-		linklist = dh.get_linklist()
-		datalist = dh.get_datalist()
-		
-		outputs = []
-		for i in xrange(len(datalist)):
+		if options.cv:
 			
-			data = datalist[i]
-			link = linklist[i]
-			
-			out = analysis.predict(link,data)
-			
-			if out!='': outputs.append(out)
+			#perform cross validation
+			analysis.cross_validation()
 		
-		if len(outputs)>0:
-			print '\n\nEvents with prediction:\n'
-			for i,output in enumerate(outputs):
-				print 'event #%d:' % i
-				print output
+		else:
+			#get filenames
+			if len(args)<1:
+				raise NameError("Usage: %s /path_some_file")
+			else: fnames=args
+			
+			#create dummy files for testing purpose
+			if fnames[0].split("/")[1]=='test':	create_dummy_files(fnames)
+		
+			#train clf with existing data
+			analysis.fit()
+		
+			#predict outcome events
+			print 'Predicting outcome events:\n'
+		
+			#load event data from fnames
+			dh = Data_Handle().cut_raw_data(fnames=fnames,analysis=True)
+			linklist = dh.get_linklist()
+			datalist = dh.get_datalist()
+			
+			outputs = []
+			for i in xrange(len(datalist)):
 				
-			print  '%d of %d events with prediction' % (len(outputs),len(datalist))
-	
+				data = datalist[i]
+				link = linklist[i]
+				
+				out = analysis.predict(link,data)
+				
+				if out!='': outputs.append(out)
+			
+			value=par[0]*(par[3]-par[2])
+			output += 'limit=%.2E -> value=%.2f\n%d of %d events with prediction:\n\n' % (par[0],value,len(outputs),len(datalist))
+			if len(outputs)>0:
+				output += analysis.performance()
+				for i,item in enumerate(outputs):
+					output += '  event #%d:\n%s\n' % (i+1,item)
+				output += '\n'
+				
+
+	print output
+		
 if __name__ == "__main__":
     main()		
 
