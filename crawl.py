@@ -264,10 +264,7 @@ def get_event_schedule(events):
 	
 	return np.array(e_times)
 	
-def scrape_events(etuple):
-
-	run_paralel=etuple[0]
-	events=etuple[1]
+def scrape_events(events):
 	
 	if len(events)>15: events = events[:15]
 	
@@ -349,6 +346,9 @@ def scrape_events(etuple):
 			output+='\n  --%s' % finished
 			print output
 			
+			#purge phantomjs from system
+			os.system('pgrep phantomjs | xargs kill')
+			
 		run+=1
 		
 def main():
@@ -357,13 +357,10 @@ def main():
 parser = OptionParser()
 parser.add_option("-l", "--load-events", dest="load_events", action="store_true", default=False,
                   help="load event list from file (events.pkl)")
-parser.add_option("-n", "--numProcesses", dest="numProcesses", default='1',
-                  help="specifies how many processes scrape simultaneously")
 parser.add_option("-t", "--timespan", dest="timespan", default='70,100',
                   help="specifies range in time from where to select events")
 
 (options, args) = parser.parse_args()
-numProcesses = int(options.numProcesses)
 timespan = ( int(options.timespan.split(",")[0]), int(options.timespan.split(",")[1]) )
 
 #~ countries = ['US','CL']
@@ -379,12 +376,7 @@ else:
 
 events = np.array(events)
 np.random.shuffle(events)
-events_list = np.array_split(events,numProcesses)
-etuples = [ ( i+1,item ) for i,item in enumerate(events_list) ] 
 
-if numProcesses==1: scrape_events(etuples[0])
-else:	poolmap(scrape_events,etuples,numProcesses=numProcesses)
+scrape_events(events)
 
-#purge phantomjs from system
-os.system('pgrep phantomjs | xargs kill')
 
