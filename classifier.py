@@ -253,7 +253,7 @@ class Classifier():
 		
 		self.trained=False
 
-	def cross_validation_clfs(self,x,y,xcontrol,num_cv=5):
+	def cross_validation_clfs(self,x,y,num_cv=5):
 		
 		out = 'cross validation algorithms (cv=%d):\n' % num_cv
 				 
@@ -267,13 +267,13 @@ class Classifier():
 		out += "B-KNN:	%0.2f (+/- %0.2f)\n" % (scores.mean(), scores.std() * 2)
 		
 		scores = self.cross_val_score(self.clfs['combi'], x, y, num_cv=num_cv)
-		out += "Combi:	%0.2f (+/- %0.2f) -> subset=%0.2f\n" % (scores.mean(),scores.std()*2,self.clfs['combi'].get_size_subset(xcontrol))
+		out += "Combi:	%0.2f (+/- %0.2f) -> subset=%0.2f\n" % (scores.mean(),scores.std()*2,self.clfs['combi'].get_size_subset(x))
 
 		scores = self.cross_val_score(self.clfs['ptree'], x, y, num_cv=num_cv)
-		out += "P-Tree:	%0.2f (+/- %0.2f) -> subset=%0.2f\n" % (scores.mean(),scores.std()*2,self.clfs['ptree'].get_size_subset(xcontrol))
+		out += "P-Tree:	%0.2f (+/- %0.2f) -> subset=%0.2f\n" % (scores.mean(),scores.std()*2,self.clfs['ptree'].get_size_subset(x))
 
 		scores = self.cross_val_score(self.clfs['pknn'], x, y, num_cv=num_cv)
-		out += "P-KNN:	%0.2f (+/- %0.2f) -> subset=%0.2f\n" % (scores.mean(),scores.std()*2,self.clfs['pknn'].get_size_subset(xcontrol))
+		out += "P-KNN:	%0.2f (+/- %0.2f) -> subset=%0.2f\n" % (scores.mean(),scores.std()*2,self.clfs['pknn'].get_size_subset(x))
 		
 		print out
 		
@@ -290,7 +290,7 @@ class Classifier():
 		scores=np.array(scores)
 		return scores	
 
-	def cross_validation_clfs_values(self,x,y,xcontrol,num_cv=5):
+	def cross_validation_clfs_values(self,x,y,num_cv=5):
 		
 		out = 'cross validation algorithms (cv=%d): (ignore results==0)\n' % num_cv
 
@@ -298,7 +298,7 @@ class Classifier():
 			if not getattr(self.clfs[k],"score_values",None)==None:
 				
 				scores = self.cross_val_score_values(self.clfs[k], x, y, num_cv=num_cv)
-				out += "%s:	%0.2f (+/- %0.2f) -> subset=%0.2f\n" % (k,scores.mean(),scores.std()*2,self.clfs['combi'].get_size_subset_values(xcontrol))
+				out += "%s:	%0.2f (+/- %0.2f) -> subset=%0.2f\n" % (k,scores.mean(),scores.std()*2,self.clfs[k].get_size_subset_values(x))
 				
 		print out
 		

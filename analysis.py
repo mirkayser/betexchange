@@ -123,7 +123,7 @@ class Analysis():
 			
 	def cross_validation(self):
 		
-		self.clf.cross_validation_clfs_values(self.x,self.y,self.xcontrol,num_cv=5)
+		self.clf.cross_validation_clfs_values(self.xtrain,self.ytrain,num_cv=5)
 			
 def main():
 	print 'here starts main program'
@@ -134,12 +134,27 @@ def main():
 	                  help="cross validate methods with dataset")
 	(options, args) = parser.parse_args()
 	
+	#parameter definition
+	pars = [ [0.2,70.0,3.0,24.0], #score=0.84, subset=0.19
+					 [0.1,70.0,3.9,23.5], #score=0.80, subset=0.28
+					 [0.0,70.0,4.0,23.9]  #score=0.82, subset=0.58
+					]	
+	
+	par=pars[2]
+	
 	#init analysis object
-	analysis = Analysis(limit=0.0,max_price=5,cut_pars=[70,5,15])
+	analysis = Analysis(limit=par[0],max_price=5,cut_pars=par[1:])
 	
 	if options.cv:
 		#perform cross validation
 		analysis.cross_validation()
+		
+		a = analysis
+		scores = a.clf.cross_val_score_values(a.clf.clfs['ptree'], a.xtrain, a.ytrain, num_cv=5)
+		score  = scores.mean()
+		subset = a.clf.clfs['ptree'].get_size_subset_values(a.xtrain)
+		
+		print 'score=%.2f, subset=%.2f  pars: %s' % (score,subset,str(par))
 	
 	else:
 		#get filenames
