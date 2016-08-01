@@ -198,10 +198,10 @@ def main():
 				for i,item in enumerate(outputs):
 					output += '  event #%d:\n%s\n' % (i+1,item)
 				output += '\n'
-				
-	print output
-
-	embed()
+	
+	if not options.cv:
+		print output	
+		embed()
 		
 if __name__ == "__main__":
     main()		

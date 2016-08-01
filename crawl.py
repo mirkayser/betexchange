@@ -312,7 +312,7 @@ def scrape_events(events):
 						#if no event within 30 minutes of start -> go to sleep
 						if np.all( e_times[finished==0] - datetime.datetime.now() ) > datetime.timedelta(minutes=30):
 							sleep = int(datetime.timedelta(minutes=5).total_seconds() - diff)
-							print '\nsleeping %d seconds: %s' % (sleep,e_times[finished==0] - datetime.datetime.now())
+							print '\nsleeping %d seconds:'
 							bar = progressbar.ProgressBar()
 							for sec in bar(xrange(sleep)):
 								time.sleep(1)										
@@ -370,14 +370,14 @@ parser.add_option("-l", "--load-events", dest="load_events", action="store_true"
                   help="load event list from file (cache-events.pkl)")
 parser.add_option("--cachenum", dest="cachenum", default='0',
                   help="load event list from file (events.pkl)")
-parser.add_option("-t", "--timespan", dest="timespan", default='70,105',
+parser.add_option("-t", "--timespan", dest="timespan", default='60,90',
                   help="specifies range in time from where to select events")
 
 (options, args) = parser.parse_args()
 timespan = ( int(options.timespan.split(",")[0]), int(options.timespan.split(",")[1]) )
 
-#~ countries = ['US','CL']
-countries = ['GB','IE']
+countries = ['US','CL']
+#~ countries = ['GB','IE']
 
 #get event urls
 cachenm='cache-events_%s.pkl' % options.cachenum

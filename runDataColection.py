@@ -19,7 +19,7 @@ numRuns = int(options.numRuns)
 for i in xrange(numRuns):
 	
 	#~ comand = 'gnome-terminal -e "./crawl.py -t 60,90"'	#close terminal upon termiation of process
-	comand = 'gnome-terminal -x bash -c "./crawl.py -t 60,90 && bash"'	#keep terminal open
+	comand = 'gnome-terminal -x bash -c "./crawl.py --cachenum %d -t 60,90 && bash"' % i	#keep terminal open
 	os.system(comand)
 	
 	print 'waiting to start run %d:' % (i+2)
