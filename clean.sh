@@ -3,4 +3,4 @@
 rm Data/prediction/*
 rm Data/schedules/*
 
-rm cache-events.pkl
+rm cache-events_*pkl

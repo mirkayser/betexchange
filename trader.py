@@ -9,7 +9,7 @@ from my.tools import closeTo
 
 np.set_printoptions(precision=3, threshold=50, linewidth=100)		
 
-def lay(lrate,brate,bstake=2):
+def lay(lrate,brate,bstake=2.5):
 	
 	lrate,brate,bstake = float(lrate),float(brate),float(bstake)
 	
@@ -29,7 +29,7 @@ def lay(lrate,brate,bstake=2):
 	
 	print out
 
-def back(brate,lrate,stake=2):
+def back(brate,lrate,stake=2.5):
 	
 	lrate,brate,stake = float(lrate),float(brate),float(stake)
 	

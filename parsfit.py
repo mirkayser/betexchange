@@ -15,7 +15,11 @@ class ParsFit(object):
 	
 	def model(self,par,verbose=False):
 		
-		a = Analysis(limit=par[0],max_price=5,cut_pars=par[1:],verbose=False)
+		limit    = par[0] 
+		cut_pars = par[1:]
+		#~ cut_pars = [ 70,4,15  ]
+		
+		a = Analysis(limit=limit,max_price=5,cut_pars=cut_pars,verbose=False)
 		
 		if len(a.xtrain)<5:
 			score,subset = np.nan,np.nan
@@ -25,6 +29,8 @@ class ParsFit(object):
 			subset = a.clf.clfs['ptree'].get_size_subset_values(a.xtrain)
 		
 		if verbose: print 'score=%.2f, subset=%.2f  pars: %s' % (score,subset,str(par))
+		
+		self.cut_pars = cut_pars
 		
 		return score,subset
 	
@@ -98,6 +104,7 @@ def get_parsfits(args):
 	pars,result = fit.Minimize(starts,lower_bounds=lb, upper_bounds=ub,method='BOBYQA')
 	score,subset= fit.score,fit.subset
 	
+	#~ print fit.cut_pars
 	print fit
 	
 	return fit
@@ -105,27 +112,43 @@ def get_parsfits(args):
 def main():
 	print 'here starts main program'
 
-#parameters for unparallel fit
-pars = [ 	[  0.22,     7.0e+01,4.0e+00,2.4e+01], #score=0.81, subset=0.19
-					[  0.113,  	 7.0e+01,4.0e+00,2.4e+01], #score=0.78, subset=0.23
-					[  2.500e-02,7.0e+01,4.0e+00,2.4e+01], #score=0.78, subset=0.38
-					[  1.330e-02,7.0e+01,4.0e+00,2.4e+01]  #score=0.79, subset=0.45				 
+#parameters
+cut_pars = [60,4,24]
+pars = [ 	[  0.22,     cut_pars[0],cut_pars[1],cut_pars[2] ], #score=0.81, subset=0.19
+					[  0.113,  	 cut_pars[0],cut_pars[1],cut_pars[2]], #score=0.78, subset=0.23
+					[  2.500e-02,cut_pars[0],cut_pars[1],cut_pars[2]], #score=0.78, subset=0.38
+					[  1.330e-02,cut_pars[0],cut_pars[1],cut_pars[2]]  #score=0.79, subset=0.45				 
 				]
 
-lb = [0.0,70, 4,24]
-ub = [0.3,70, 4,24]
-
+lb = [    60, 4,24 ]
+ub = [0.3,60, 4,24]
 
 #parallelfit
-args = [ [ pars[0],[0.2,  70, 4,24],ub ],  #score=0.84, subset=0.19
-				 [ pars[1],[0.1,  70, 4,24],ub ],  #score=0.80, subset=0.28
-				 [ pars[2],[0.025,70, 4,24],ub ],  #score=0.82, subset=0.58
-				 [ pars[3],[0.01, 70, 4,24],ub ]  
+args = [ [ pars[0],[0.2,  lb[0],lb[1],lb[2]],ub ],  #score=0.84, subset=0.19
+				 [ pars[1],[0.1,  lb[0],lb[1],lb[2]],ub ],  #score=0.80, subset=0.28
+				 [ pars[2],[0.025,lb[0],lb[1],lb[2]],ub ],  #score=0.82, subset=0.58
+				 [ pars[3],[0.01, lb[0],lb[1],lb[2]],ub ]  
 				]
+
+#~ #parameters
+#~ pars = [ 	[  0.22 ],
+					#~ [  0.113 ],
+					#~ [  2.500e-02 ],
+					#~ [  1.330e-02 ]		 
+				#~ ]
+
+#~ ub = [0.3]
+
+#~ #parallelfit
+#~ args = [ [ pars[0],[0.2 ],ub ],  
+				 #~ [ pars[1],[0.1 ],ub ],  
+				 #~ [ pars[2],[0.025 ],ub ],  
+				 #~ [ pars[3],[0.01 ],ub ]  
+				#~ ]
 
 fits = poolmap(get_parsfits,args,numProcesses=2)
 
-export_pars(fits)
+#~ export_pars(fits)
 	
 	
 

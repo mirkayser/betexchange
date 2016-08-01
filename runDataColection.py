@@ -18,12 +18,13 @@ numRuns = int(options.numRuns)
 
 for i in xrange(numRuns):
 	
-	comand = 'gnome-terminal -e "./crawl.py -t 70,105"'
+	#~ comand = 'gnome-terminal -e "./crawl.py -t 60,90"'	#close terminal upon termiation of process
+	comand = 'gnome-terminal -x bash -c "./crawl.py -t 60,90 && bash"'	#keep terminal open
 	os.system(comand)
 	
 	print 'waiting to start run %d:' % (i+2)
-	bar = progressbar.ProgressBar()
-	for j in bar(xrange(2100)):
+	bar = progressbar.ProgressBar()	
+	for j in bar(xrange(1800)):
 		time.sleep(1)
 		
 print 'finished'

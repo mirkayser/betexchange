@@ -11,6 +11,7 @@ from optparse import OptionParser
 
 from data_handle import Data_Handle
 from classifier import *
+from trader import *
 
 from IPython import embed
 #embed() # this call anywhere in your program will start IPython
@@ -198,8 +199,9 @@ def main():
 					output += '  event #%d:\n%s\n' % (i+1,item)
 				output += '\n'
 				
-
 	print output
+
+	embed()
 		
 if __name__ == "__main__":
     main()		

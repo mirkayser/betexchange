@@ -149,13 +149,18 @@ class ScrapeEvent():
 	
 	def get_runner_names(self):
 		
-		xpaths = ['//h3[@class="ng-binding ng-isolate-scope runner-name runner-name-with-jockey"]',
-							'//h3[@class="ng-binding ng-isolate-scope runner-name"]',
-							'//span[@class="runner-name ng-binding ng-isolate-scope"]']
+		#~ xpaths = ['//h3[@class="runner-name ng-binding ng-scope ng-isolate-scope runner-name-with-jockey"]'
+							#~ '//h3[@class="ng-binding ng-isolate-scope runner-name runner-name-with-jockey"]',
+							#~ '//h3[@class="ng-binding ng-isolate-scope runner-name"]',
+							#~ '//span[@class="runner-name ng-binding ng-isolate-scope"]']
+		xpaths = ['//h3[contains(@class,"runner-name")]',
+							'//span[contains(@class,"runner-name")]']
 		for xpath in xpaths:					
 			rnames = self.driver.find_elements_by_xpath(xpath)
 			if len(rnames)!=0:
 				break
+		if len(rnames)==0: 
+			raise ValueError("unable to get runner names")
 		return rnames
 		
 	def add_data(self):
@@ -362,6 +367,8 @@ def main():
 	
 parser = OptionParser()
 parser.add_option("-l", "--load-events", dest="load_events", action="store_true", default=False,
+                  help="load event list from file (cache-events.pkl)")
+parser.add_option("--cachenum", dest="cachenum", default='0',
                   help="load event list from file (events.pkl)")
 parser.add_option("-t", "--timespan", dest="timespan", default='70,105',
                   help="specifies range in time from where to select events")
@@ -373,11 +380,12 @@ timespan = ( int(options.timespan.split(",")[0]), int(options.timespan.split(","
 countries = ['GB','IE']
 
 #get event urls
+cachenm='cache-events_%s.pkl' % options.cachenum
 if options.load_events:
-	with open('cache-events.pkl','rb')as inputfile: events = pickle.load(inputfile)	
+	with open(cachenm,'rb')as inputfile: events = pickle.load(inputfile)	
 else:
 	events = sorted(get_events(timespan=timespan,countries=countries), key=itemgetter('time_e'))
-	with open('cache-events.pkl','wb') as outputfile: pickle.dump(events,outputfile,pickle.HIGHEST_PROTOCOL)
+	with open(cachenm,'wb') as outputfile: pickle.dump(events,outputfile,pickle.HIGHEST_PROTOCOL)
 	
 
 events = np.array(events)
