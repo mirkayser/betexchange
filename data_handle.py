@@ -204,12 +204,29 @@ class DataML():
 
 	def get_result(self,eid,rid):
 		
+		#result array
 		a = self.rlist[eid]
 		a = a[a['rid']==rid]		
 		
-		if len(a)>=5:	slope = self.get_slope(a['time'],a['price'])
-		else:					slope = np.nan
-		return slope
+		#feature array (for start values)
+		features = self.flist[eid]
+		features = features[features['rid']==rid]
+		
+		if len(a)>=5:	
+			#~ slope = self.get_slope(a['time'],a['price'])
+			
+			start = { 'time':features['time'][-1], 'price':features['price'][-1] }
+			
+			minimum = np.min(a['price'])
+			maximum = np.max(a['price'])
+			
+			result = ( minimum-start['price'], maximum-start['price'] )
+
+		else:					
+			#~ slope = np.nan
+			#~ embed()
+			result = (np.nan,np.nan)
+		return result
 	
 	def get_runner_name(self,eid,rid):
 		a = self.datalist[eid]
@@ -263,6 +280,8 @@ class DataML():
 			maximas= self.get_maximas(a['price'])
 			tot_slope  = self.get_slope(a['time'],a['price'])
 			end_slope  = self.get_slope(a['time'][-10:],a['price'][-10:])
+			minimum = np.min(a['price'])
+			maximum = np.max(a['price'])
 			
 			dic['first'] = first
 			dic['last'] = last
@@ -272,6 +291,9 @@ class DataML():
 			dic['end_slope'] = end_slope
 			#~ dic['med_dif'] = last-median		
 			dic['maximas'] = maximas	
+			#~ dic['min'] = minimum	
+			#~ dic['max'] = maximum	
+			
 			
 		else: dic['nan']=np.nan
 					

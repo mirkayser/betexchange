@@ -15,18 +15,23 @@ from IPython import embed
 
 np.set_printoptions(precision=3, threshold=50, linewidth=100)
 
-def prepareData(features,result,limit=0.1):
+def prepareData(features,result,limits=[0.5, 2.0]):
 	"""prepare samples for ml"""		
 	
-	limit=np.abs(limit)
-	
-	y=[]
-	for r in result:
-		if r>limit:			y.append(1)
-		elif r<-limit:	y.append(-1)
-		else:						y.append(0)
-
-	x=np.array(features)
+	x,y=[],[]
+	for i,r in enumerate(result):
+		if np.any(np.isnan(r)):
+			continue
+		else:
+			x.append(features[i])
+						
+			if   r[0]>=-limits[0] and r[1]>= limits[1]:			y.append(1)
+			elif r[1]<= limits[0] and r[0]<=-limits[1]:			y.append(-1)
+			else:																					y.append(0)
+			
+			#~ print r,y[-1]
+			
+	x=np.array(x)
 	y=np.array(y)
 
 	return x,y
@@ -102,7 +107,7 @@ class CombiCLF():
 		if not self.trained: raise ValueError('CLF not trained, run self.fit()')
 		
 		ym = self.predict(x)
-		
+
 		mask = (np.isnan(ym)==False) & (ym!=0) 
 		ym= ym[mask]
 		y = y[mask]
@@ -121,6 +126,7 @@ class CombiCLF():
 		if not self.trained: raise ValueError('CLF not trained, run self.fit()')
 		
 		ym = self.predict(x)
+		
 		mask = (np.isnan(ym)==False) & (ym!=0)
 		ym = ym[mask]
 		

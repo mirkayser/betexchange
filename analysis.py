@@ -42,12 +42,13 @@ def create_dummy_files(fnames):
 
 class Analysis():
 	
-	def __init__(self,limit,max_price,cut_pars,verbose=True):
+	def __init__(self,limits,max_price,cut_pars,verbose=True):
 		
 		if verbose: 
-			print 'fitting methods to dataset:\nlimit=%.2E, cut_pars=%s\n' % (limit,cut_pars)
+			print 'fitting methods to dataset:\nlimits=[%.2f,%.2f]\n' % (limits[0],limits[1])
 			
-		self.limit=float(limit)
+		#~ self.limit=float(limit)
+		self.limits=limits
 		self.max_price=float(max_price)
 		self.cut_pars=cut_pars
 		
@@ -61,12 +62,12 @@ class Analysis():
 		runner_names,feature_names,features,result = DataML().get_lists(datalist,max_price=self.max_price,cut_pars=self.cut_pars,verbose=verbose)
 		
 		#prepare data for classifiers
-		self.x,self.y = prepareData(features,result,limit=self.limit)
+		self.x,self.y = prepareData(features,result,limits=self.limits)
 		
 		#split in train and test samples (not random!!!)
 		self.xtrain,self.xcontrol,self.ytrain,self.ycontrol = cross_validation.train_test_split(self.x,self.y,test_size=0.2,random_state=42)
 		if verbose:
-			print '  Samples (limit=%.2f, max_price=%.1f):\n  train: %d\n  control: %d\n' % (self.limit,self.max_price,len(self.x),len(self.xcontrol))	
+			print '  Samples (limits=[%.2f,%.2f], max_price=%.1f):\n  train: %d\n  control: %d\n' % (self.limits[0],self.limits[1],self.max_price,len(self.x),len(self.xcontrol))	
 		
 		self.clf = Classifier()
 
@@ -78,13 +79,23 @@ class Analysis():
 		
 		out = self.clf.performance_values(self.xcontrol,self.ycontrol)
 		return out
+
+	def test(self,datalist):
 		
-	def predict(self,link,data,verbose=True):			
+		#get lists (names,features,etc...)
+		runner_names,feature_names,features,result = DataML().get_lists(datalist,max_price=self.max_price,cut_pars=self.cut_pars)	
+
+		#prepare data for classifiers
+		x,y = prepareData(features,result,limits=self.limits)
+	
+		out = self.clf.performance_values(x,y)
+		
+	def predict(self,link,datalist,verbose=True):			
 		
 		out = ''
 		
 		#get lists (names,features,etc...)
-		runner_names,feature_names,features,result = DataML().get_lists([data],max_price=self.max_price,cut_pars=self.cut_pars)	
+		runner_names,feature_names,features,result = DataML().get_lists(datalist,max_price=self.max_price,cut_pars=self.cut_pars)	
 		
 		#skip event if not enough data
 		if len(features)==0:
@@ -111,17 +122,18 @@ class Analysis():
 				
 				price = x[:,feature_names.index("last")]
 				
-				array = np.array(zip(runner_names,c_ym,t_ym,t_pm,k_ym,k_pm,price),dtype=[('name','S30'),('c_ym',int),('t_ym',int),('t_pm',float),('k_ym',int),('k_pm',float),('price',float)])
-							
+				array = np.array(zip(runner_names,c_ym,t_ym,t_pm,k_ym,k_pm,price),
+				dtype=[('name','S30'),('c_ym',int),('t_ym',int),('t_pm',float),('k_ym',int),('k_pm',float),('price',float)])		
+						
 				#~ array[::-1].sort(order=['t_ym','t_pm'])	#reverse sort
 				array.sort(order=['price'])
 				
 				#output succesful prediction
 				out += '  url:  %s\n' % link
 				out += '  %s    %s   %s          %s          %s\n' %(' '.ljust(20,' '), 'c','t','k','price')
-				for item in array:
+				for i,item in enumerate(array):
 					out += '  %s:  %2d  %2d (%.2f)  %2d (%.2f)   %5.2f\n' % (item['name'][:20].ljust(20,' '),item['c_ym'],item['t_ym'],item['t_pm'],item['k_ym'],item['k_pm'],item['price'])
-			
+				
 			else:
 				print '  WARNING: no prediction possible (%s)\n' % link
 				
@@ -143,18 +155,21 @@ def main():
 	parser = OptionParser()
 	parser.add_option("--cv", dest="cv", action="store_true", default=False,
 	                  help="cross validate methods with dataset")
+	parser.add_option("--test", dest="test", action="store_true", default=False,
+	                  help="test methods with specific events")
 	(options, args) = parser.parse_args()
 
 	#load parameters
 	pars = load_pars()
+	cut_pars = [ 60,4,24 ]
 	
-	#~ pars = pars[2:]
+	pars = pars[:1]
 	
 	output='\n\nResult:\n\n'	
 	for par in pars:	
-		
+	
 		#init analysis object
-		analysis = Analysis(limit=par[0],max_price=5,cut_pars=par[1:])
+		analysis = Analysis(limits=par,max_price=5,cut_pars=cut_pars)
 		
 		if options.cv:
 			
@@ -167,41 +182,44 @@ def main():
 				raise NameError("Usage: %s /path_some_file")
 			else: fnames=args
 			
-			#create dummy files for testing purpose
-			if fnames[0].split("/")[1]=='test':	create_dummy_files(fnames)
+			#~ #create dummy files for testing purpose
+			#~ if fnames[0].split("/")[1]=='test':	create_dummy_files(fnames)
 		
 			#train clf with existing data
 			analysis.fit()
-		
-			#predict outcome events
-			print 'Predicting outcome events:\n'
-		
+
 			#load event data from fnames
 			dh = Data_Handle().cut_raw_data(fnames=fnames,analysis=True)
 			linklist = dh.get_linklist()
 			datalist = dh.get_datalist()
 			
-			outputs = []
-			for i in xrange(len(datalist)):
+			if options.test:
+				analysis.test(datalist)
 				
-				data = datalist[i]
-				link = linklist[i]
+			else:	
+				#predict outcome events
+				print 'Predicting outcome events:\n'
 				
-				out = analysis.predict(link,data)
-				
-				if out!='': outputs.append(out)
-			
-			value=par[0]*(par[3]-par[2])
-			output += 'limit=%.2E -> value=%.2f\n%d of %d events with prediction:\n\n' % (par[0],value,len(outputs),len(datalist))
-			if len(outputs)>0:
-				output += analysis.performance()
-				for i,item in enumerate(outputs):
-					output += '  event #%d:\n%s\n' % (i+1,item)
-				output += '\n'
+				outputs = []
+				for i in xrange(len(datalist)):
+					
+					data = datalist[i]
+					link = linklist[i]
+					
+					out = analysis.predict(link,[data])
+					
+					if out!='': outputs.append(out)
 	
-	if not options.cv:
+				output += 'limits=[%.2f,%.2f]\n%d of %d events with prediction:\n\n' % (par[0],par[1],len(outputs),len(datalist))
+				if len(outputs)>0:
+					output += analysis.performance()
+					for i,item in enumerate(outputs):
+						output += '  event #%d:\n%s\n' % (i+1,item)
+					output += '\n'
+
+	if options.cv==False and options.test==False:
 		print output	
-		embed()
+		#~ embed()
 		
 if __name__ == "__main__":
     main()		
