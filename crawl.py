@@ -380,8 +380,6 @@ timespan = ( int(options.timespan.split(",")[0]), int(options.timespan.split(","
 if len(args)<1:	countries = None
 else: 					countries = args
 
-#~ countries = ['US','CL']
-
 #get event urls
 cachenm='cache-events_%s.pkl' % options.cachenum
 if options.load_events:
@@ -392,7 +390,7 @@ else:
 	
 
 events = np.array(events)
-np.random.shuffle(events)
+#~ np.random.shuffle(events)
 
 scrape_events(events)
 

@@ -80,15 +80,39 @@ class Analysis():
 		out = self.clf.performance_values(self.xcontrol,self.ycontrol)
 		return out
 
-	def test(self,datalist):
+	def test(self,datalist,num=3):
+		
+		print 'testing algorithms on selected events %d times' % num
 		
 		#get lists (names,features,etc...)
 		runner_names,feature_names,features,result = DataML().get_lists(datalist,max_price=self.max_price,cut_pars=self.cut_pars)	
 
 		#prepare data for classifiers
 		x,y = prepareData(features,result,limits=self.limits)
+		
+		#test num times
+		scores,subsets = {},{}
+		for i in xrange(num):
+			
+			#train clfs
+			self.fit()
+			
+			#test clfs
+			for k in sorted(self.clf.clfs.keys()):
+				if not getattr(self.clf.clfs[k],"score_values",None)==None:
+					if not scores.has_key(k):
+						scores[k] = np.array([])
+						subsets[k] = np.array([])
+					
+					scores[k] = np.append( scores[k], self.clf.clfs[k].score_values(x,y) )
+					subsets[k] = np.append( subsets[k], self.clf.clfs[k].get_size_subset_values(x) )
 	
-		out = self.clf.performance_values(x,y)
+		out = '  test algorithms (ignoring result==0):\n'
+		for k in sorted(scores.keys()):
+			scores[k][np.isnan(scores[k])==True] = 0
+			out += "  %s:	%0.2f -> subset=%0.2f\n" % (k.ljust(5,' '),scores[k].mean(),subsets[k].mean())
+		out+='\n'
+		print out		
 		
 	def predict(self,link,datalist,verbose=True):			
 		
@@ -184,9 +208,6 @@ def main():
 			
 			#~ #create dummy files for testing purpose
 			#~ if fnames[0].split("/")[1]=='test':	create_dummy_files(fnames)
-		
-			#train clf with existing data
-			analysis.fit()
 
 			#load event data from fnames
 			dh = Data_Handle().cut_raw_data(fnames=fnames,analysis=True)
@@ -194,11 +215,14 @@ def main():
 			datalist = dh.get_datalist()
 			
 			if options.test:
-				analysis.test(datalist)
+				analysis.test(datalist,num=50)
 				
 			else:	
 				#predict outcome events
 				print 'Predicting outcome events:\n'
+				
+				#train clf with existing data
+				analysis.fit()
 				
 				outputs = []
 				for i in xrange(len(datalist)):
