@@ -22,7 +22,7 @@ class Data_Handle():
 		self.fname = fname
 		self.timeunit=float(timeunit)
 		
-	def cut_raw_data(self,fnames,analysis=True,remove=False):
+	def cut_raw_data(self,fnames,countries=None,analysis=True,remove=False):
 		
 		def gen_datalist(events):
 			
@@ -67,8 +67,14 @@ class Data_Handle():
 				
 				uncomplete=False
 				
-				with open(fname,'rb')as inputfile: event = pickle.load(inputfile)
+				with open(fname,'rb')as inputfile: 
+					event = pickle.load(inputfile)
 				
+				#skip events from other countries
+				if countries!=None:
+					if not event.has_key('country'): continue
+					if not event['country'] in countries: continue 
+					print event['country']
 				data = event['data']
 				
 				#erase runners with empty list
@@ -347,6 +353,8 @@ def main():
 	parser = OptionParser()
 	parser.add_option("--remove", dest="remove", action="store_true", default=False,
 	                  help="remove invalid raw data")
+	parser.add_option("--uk", dest="uk", action="store_true", default=False,
+	                  help="only consider events from uk or ireland")
 	(options, args) = parser.parse_args()
 
 	#get filenames
@@ -354,8 +362,11 @@ def main():
 		raise NameError("Usage: %s /path_some_file")
 	else: fnames=args
 	
+	if options.uk: 	countries=['GB','IE']
+	else:						countries=None
+	
 	#read/cut raw data		
-	d = Data_Handle().cut_raw_data(fnames=fnames,analysis=False,remove=options.remove)
-
+	d = Data_Handle().cut_raw_data(fnames=fnames,countries=countries,analysis=False,remove=options.remove)
+	
 if __name__ == "__main__":
     main()
