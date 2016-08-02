@@ -312,7 +312,7 @@ def scrape_events(events):
 						#if no event within 30 minutes of start -> go to sleep
 						if np.all( e_times[finished==0] - datetime.datetime.now() ) > datetime.timedelta(minutes=30):
 							sleep = int(datetime.timedelta(minutes=5).total_seconds() - diff)
-							print '\nsleeping %d seconds:'
+							print '\nsleeping %d seconds:' % sleep
 							bar = progressbar.ProgressBar()
 							for sec in bar(xrange(sleep)):
 								time.sleep(1)										
@@ -376,8 +376,11 @@ parser.add_option("-t", "--timespan", dest="timespan", default='60,90',
 (options, args) = parser.parse_args()
 timespan = ( int(options.timespan.split(",")[0]), int(options.timespan.split(",")[1]) )
 
-countries = ['US','CL']
-#~ countries = ['GB','IE']
+#get countries
+if len(args)<1:	countries = None
+else: 					countries = args
+
+#~ countries = ['US','CL']
 
 #get event urls
 cachenm='cache-events_%s.pkl' % options.cachenum
@@ -393,5 +396,5 @@ np.random.shuffle(events)
 
 scrape_events(events)
 
-#purge phantomjs from system
-os.system('pgrep phantomjs | xargs kill')
+#~ #purge phantomjs from system
+#~ os.system('pgrep phantomjs | xargs kill')
