@@ -22,7 +22,7 @@ class Data_Handle():
 		self.fname = fname
 		self.timeunit=float(timeunit)
 		
-	def cut_raw_data(self,fnames,countries=None,analysis=True,remove=False):
+	def cut_raw_data(self,fnames,countries=None,analysis=True,save=False,remove=False):
 		
 		def gen_datalist(events):
 			
@@ -111,7 +111,7 @@ class Data_Handle():
 				self.datalist = datalist
 				self.linklist = linklist
 				
-				if not analysis:
+				if analysis==False and save==True:
 					np.save(self.fname,datalist)
 					print '%d of %d events read into dataset & written to %s\n' % (len(events),len(fnames),self.fname)
 				else:
@@ -353,6 +353,8 @@ def main():
 	parser = OptionParser()
 	parser.add_option("--remove", dest="remove", action="store_true", default=False,
 	                  help="remove invalid raw data")
+	parser.add_option("--save", dest="save", action="store_true", default=False,
+	                  help="save data to numpy array")
 	parser.add_option("--uk", dest="uk", action="store_true", default=False,
 	                  help="only consider events from uk or ireland")
 	(options, args) = parser.parse_args()
@@ -366,7 +368,7 @@ def main():
 	else:						countries=None
 	
 	#read/cut raw data		
-	d = Data_Handle().cut_raw_data(fnames=fnames,countries=countries,analysis=False,remove=options.remove)
+	d = Data_Handle().cut_raw_data(fnames=fnames,countries=countries,analysis=False,save=options.save,remove=options.remove)
 	
 if __name__ == "__main__":
     main()
