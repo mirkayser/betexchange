@@ -21,7 +21,7 @@ def get_events(timespan=(90,150),countries=None):
 	from selenium.webdriver.support import expected_conditions as EC
 	from selenium.webdriver.common.by import By
 	
-	events = []
+	events,races = [],[]
 	
 	print 'searching for events on betfair.com'
 	spider = Spider(gui=0)
@@ -30,14 +30,16 @@ def get_events(timespan=(90,150),countries=None):
 	
 	#select all available races
 	if countries==None:
-		races = spider.driver.find_elements_by_xpath('//div[@class="single-race"]/span/a')
-	
+		cou = 'None'
+		tags = spider.driver.find_elements_by_xpath('//div[@class="single-race"]/span/a')
+		for tag in tags:
+			races.append( (cou,tag) )
+			
 	#select races from specified countries
 	else:
 		
 		cs = spider.driver.find_elements_by_xpath('//span[@class="country-code"]')
 		
-		races = []
 		for cou in countries:
 			for c in cs:
 				
@@ -279,7 +281,7 @@ def scrape_events(events):
 	e_times = get_event_schedule(events)
 	
 	run=1	
-	finished = np.zeros_like(events)
+	finished,outputs = np.zeros_like(events),['']*len(events)
 	while len(finished[finished==0])>0:
 		
 		print '\nStart Run %d: (%d / %d)  finished: %s' % (run,len(finished[finished==0]),len(events),str(finished))
@@ -287,7 +289,9 @@ def scrape_events(events):
 		for i in xrange(len(events)):
 			
 			#skip finished
-			if finished[i]==1: continue		
+			if finished[i]==1: 
+				print outputs[i]
+				continue		
 			
 			output=''
 
@@ -358,6 +362,7 @@ def scrape_events(events):
 				except: pass
 			
 			output+='\n  --%s' % finished
+			outputs[i] = output+'\n  --last output'
 			print output
 			
 		run+=1

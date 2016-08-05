@@ -15,8 +15,15 @@ parser.add_option("-n", "--numRuns", dest="numRuns", default='3',
                   help="number of runs to be started", metavar="FILE")
 parser.add_option("--keepopen", dest="keepopen", action="store_true", default=False,
                   help="if set to true, keeps open terminals after process has terminated")                  
+parser.add_option("--wait", dest="wait", default='0',
+                  help="wait before first run") 
 (options, args) = parser.parse_args()
 numRuns = int(options.numRuns)
+wait = float(options.wait)
+
+if wait!=0:
+	print 'wait for %.1f hours' % wait
+	time.sleep(3600*wait)
 
 for i in xrange(numRuns):
 
