@@ -74,7 +74,7 @@ class Data_Handle():
 				if countries!=None:
 					if not event.has_key('country'): continue
 					if not event['country'] in countries: continue 
-					print event['country']
+					#~ print event['country']
 				data = event['data']
 				
 				#erase runners with empty list
