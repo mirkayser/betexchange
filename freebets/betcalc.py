@@ -11,32 +11,38 @@ np.set_printoptions(precision=3, threshold=50, linewidth=100)
 
 class Bets():
 
-	def __init__(self,brate,lrate,commision=0.065,exchange_rate=1.1):
+	def __init__(self,commision=0.065,exchange_rate=1.1):
 		
-		self.brate = brate
-		self.lrate = lrate
 		self.comfactor = 1-commision
 		self.exchange_rate=exchange_rate
 
+	def set_rates(self,brate,lrate):
+		self.brate = brate
+		self.lrate = lrate
+		
 	def get_backers_stake(self,liability):
 		return np.round( liability / (self.lrate-1), 2 )
 
-	def get_liability(self,stake):
+	def get_liability(self,stake,verbose=True):
 		
 		self.stake = np.round(stake,2)
 		self.liability = np.round( stake*self.brate*(self.lrate-1) / (self.comfactor+self.lrate-1), 2 )
 		self.bstake = self.get_backers_stake(self.liability)
 		
-		print self
+		if verbose:	print self
+		
+		return self.liability
 
-	def get_stake(self,liability):
+	def get_stake(self,liability,verbose=True):
 		
 		self.liability = np.round(liability,2)
 		self.bstake = self.get_backers_stake(self.liability)
 		stake = liability*(self.comfactor+self.lrate-1) / ( self.brate*(self.lrate-1) )
 		self.stake = np.round( stake, 2)
 		
-		print self
+		if verbose:	print self
+		
+		return self.stake
 	
 	def get_profit_laywin(self):
 		return np.round( self.bstake*self.comfactor - self.stake, 2)
@@ -53,11 +59,20 @@ class Bets():
 		
 		return out
 
+	def get_stakes_50(self,liability=50):
+		
+		stake = self.get_stake(liability,verbose=False)
+		stake = np.round(stake*self.exchange_rate,0) /self.exchange_rate
+		liability = self.get_liability(stake,verbose=True)
+		
 
 			
 def main():
 	print 'here starts main program'
 
+	b = Bets()
+	b.set_rates(2.87,2.86)
+	b.get_stakes_50()
 		
 if __name__ == "__main__":
     main()		

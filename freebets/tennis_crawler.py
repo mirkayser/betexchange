@@ -182,7 +182,7 @@ def main():
 	names,prices,starts,mnames = get_data_exchange()
 	
 	#join datasets
-	print 'join datasets'
+	print '\njoin datasets'
 	data = []
 	for dic in sportsbook:
 		found=False
@@ -202,8 +202,8 @@ def main():
 			#~ print '--WARNING: not found %s (%s)' % (dic['name'],dic['market-name'])
 	print '%d/%d matched' % (len(data),len(sportsbook))
 					
-	success = compare(data,limit=0.2)
-
+	success = compare(data,limit=0.1)
+	
 	return success
 
 
@@ -217,6 +217,7 @@ if __name__ == "__main__":
 
 	if not options.repeat:
 		success = main()	
+		b = Bets()
 		embed()
 		
 	else:
