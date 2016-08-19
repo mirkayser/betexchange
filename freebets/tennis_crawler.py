@@ -21,12 +21,12 @@ from selenium.webdriver.common.by import By
 @cached
 def get_data_sportsbooks():
 	
-	urls = [	'http://www.oddschecker.com/olympics/tennis/olympic-mens',
-						'http://www.oddschecker.com/olympics/tennis/olympic-womens',
-						'http://www.oddschecker.com/olympics/tennis/olympic-specials',
-						'http://www.oddschecker.com/olympics/tennis/olympic-womens-doubles',
-						'http://www.oddschecker.com/tennis/atp-los-cabos',
-						'http://www.oddschecker.com/tennis/itf-futures',
+	#~ urls = [	'http://www.oddschecker.com/olympics/tennis/olympic-mens',
+						#~ 'http://www.oddschecker.com/olympics/tennis/olympic-womens',
+						#~ 'http://www.oddschecker.com/olympics/tennis/olympic-specials',
+						#~ 'http://www.oddschecker.com/olympics/tennis/olympic-womens-doubles',
+						#~ 'http://www.oddschecker.com/tennis/atp-los-cabos',
+	urls = [	'http://www.oddschecker.com/tennis/itf-futures',
 						'http://www.oddschecker.com/tennis/challenger-tour'
 						]
 	market_names = [ 'rio men','rio women','rio men double','rio women double','atp cabo','itf futures','challenger' ]
@@ -69,11 +69,20 @@ def get_data_sportsbooks():
 				dic['name'] = split[0].split(" ")[-1]+'/'+split[1].split(" ")[-1]
 			else:
 				dic['name'] = dic['name'].split(" ")[-1]
+			
+			headers=spider.driver.find_elements_by_xpath('//thead/tr[@class="eventTableHeader"]/td')
+			rates = {}
+			for i in xrange(len(headers)):
+				if headers[i]==None: continue
+				else:
+					head = headers[i].get_attribute("data-bk")
+					elem = elems[i].get_attribute('data-odig')
+					if elem!=None:	elem=float(elem)
+					else: elem=0.
 					
-			bet365 = elems[1].get_attribute('data-odig')
-			if bet365!=None: 
-				dic['bet365']  = float(bet365)
-				sportsbook.append(dic)
+					rates[head]=elem
+			dic['rates']=rates
+			sportsbook.append(dic)
 	
 	spider.close()
 	
@@ -151,23 +160,27 @@ def get_data_exchange():
 	
 	return names,prices,starts,mnames
 
-def compare(data,book='bet365',limit=0.5):
+def compare(data,limit=0.5):
 	
 	success=False
 			
 	out='\nResult:\n'
 				
 	for item in data:
-		
-		diff = item['lay'] - item[book]
-		
-		if item[book]<1.5 and diff>0: continue
-		if diff > limit: continue
-		
-		out += '%5.2f  %s  back=%5.2f  lay=%5.2f  -> %s  (%s)\n' % (diff,item['name'].ljust(20," "),item[book],item['lay'],item['start'],item['market-name'])
-		
-		if diff<0:
-			success=True
+		 
+		for k in item['rates'].keys():
+			
+			if k=='lay': continue
+			
+			diff = item['rates']['lay'] - item['rates'][k]
+			
+			if item['rates'][k]<1.5 and diff>0: continue
+			if diff > limit: continue
+			
+			out += '%5.2f  %s  back=%5.2f  lay=%5.2f  -> %s  (%s)\n' % (diff,item['name'].ljust(20," "),item['rates'][k],item['rates']['lay'],item['start'],item['market-name'])
+			
+			if diff<0:
+				success=True
 		
 	if out=='': out = 'WARNING: no item fits specifications'
 	
@@ -189,10 +202,8 @@ def main():
 		for i in xrange(len(names)):
 			keyword = dic['name']
 			if re.search(keyword,names[i],re.IGNORECASE):
-			#~ if dic['name'] in names[i]:
-			#~ if names[i] in dic['name']:
 			
-				dic['lay'] = prices[i] 
+				dic['rates']['lay'] = prices[i] 
 				dic['start'] = starts[i]
 				dic['market-name'] = mnames[i]
 				data.append(dic)
@@ -203,6 +214,8 @@ def main():
 	print '%d/%d matched' % (len(data),len(sportsbook))
 					
 	success = compare(data,limit=0.1)
+	
+	embed()
 	
 	return success
 
@@ -218,7 +231,7 @@ if __name__ == "__main__":
 	if not options.repeat:
 		success = main()	
 		b = Bets()
-		embed()
+		#~ embed()
 		
 	else:
 		count=0
