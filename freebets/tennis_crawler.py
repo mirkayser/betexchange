@@ -19,22 +19,21 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By		
 
 @cached
-def get_data_sportsbooks():
+def get_data_sportsbooks(names=None):
 	
-	#~ urls = [	'http://www.oddschecker.com/olympics/tennis/olympic-mens',
-						#~ 'http://www.oddschecker.com/olympics/tennis/olympic-womens',
-						#~ 'http://www.oddschecker.com/olympics/tennis/olympic-specials',
-						#~ 'http://www.oddschecker.com/olympics/tennis/olympic-womens-doubles',
-						#~ 'http://www.oddschecker.com/tennis/atp-los-cabos',
-	urls = [	'http://www.oddschecker.com/tennis/itf-futures',
-						'http://www.oddschecker.com/tennis/challenger-tour'
+	urls = [	'http://www.oddschecker.com/tennis/atp-winston-salem',
+						'http://www.oddschecker.com/tennis/challenger-tour',
+						'http://www.oddschecker.com/tennis/us-open/mens',
+						'http://www.oddschecker.com/tennis/us-open/womens'
 						]
-	market_names = [ 'rio men','rio women','rio men double','rio women double','atp cabo','itf futures','challenger' ]
+	market_names = [ item.split("tennis/")[-1] for item in urls ]					
+	
 	
 	spider = Spider(gui=0)
 	
 	#get links
 	matchlinks=[]
+	print ''
 	for i,url in enumerate(urls):
 		print 'get links from:  %s' % url
 		spider.get_url(url)
@@ -42,7 +41,13 @@ def get_data_sportsbooks():
 		for elem in elems:
 			if "in-play" in elem.get_attribute("class"): continue
 			else:
-				matchlinks.append( (elem.get_attribute("href"),market_names[i]) )
+				link = elem.get_attribute("href")
+				for name in names:
+					if name.lower() in link:
+						matchlinks.append( (link,market_names[i]) )
+						break
+						
+	if len(matchlinks)==0: raise ValueError("no events found in specified markets")
 	
 	#get data from oddschecker
 	sportsbook = []	
@@ -101,6 +106,12 @@ def get_data_exchange():
 	for elem in elems:
 		url = elem.get_attribute("href")
 		market_name = elem.get_attribute("market-name")
+		
+		if 'Challenger' in market_name: pass
+		elif 'Winston' in market_name: pass
+		elif 'US Open' in market_name: pass
+		else: continue
+		
 		urls.append(url)
 		market_names.append(market_name)	
 	
@@ -163,9 +174,9 @@ def get_data_exchange():
 def compare(data,limit=0.5):
 	
 	success=False
-			
-	out='\nResult:\n'
-				
+	
+	b = Bets()
+	out='\nResult:\n'		
 	for item in data:
 		 
 		for k in item['rates'].keys():
@@ -177,7 +188,11 @@ def compare(data,limit=0.5):
 			if item['rates'][k]<1.5 and diff>0: continue
 			if diff > limit: continue
 			
-			out += '%5.2f  %s  back=%5.2f  lay=%5.2f  -> %s  (%s)\n' % (diff,item['name'].ljust(20," "),item['rates'][k],item['rates']['lay'],item['start'],item['market-name'])
+			b.set_rates(item['rates'][k],item['rates']['lay'])
+			b.get_stake(50,verbose=False)
+			profit = b.get_profit_laywin()
+			
+			out += '%5.2f (%5.2f)  %s (%s)  back=%5.2f  lay=%5.2f  -> %s  (%s)\n' % (diff,profit,item['name'].rjust(15," "),k,item['rates'][k],item['rates']['lay'],item['start'],item['market-name'])
 			
 			if diff<0:
 				success=True
@@ -191,8 +206,8 @@ def compare(data,limit=0.5):
 def main():
 	print ''
 	
-	sportsbook = get_data_sportsbooks()
 	names,prices,starts,mnames = get_data_exchange()
+	sportsbook = get_data_sportsbooks(names)
 	
 	#join datasets
 	print '\njoin datasets'
@@ -202,7 +217,7 @@ def main():
 		for i in xrange(len(names)):
 			keyword = dic['name']
 			if re.search(keyword,names[i],re.IGNORECASE):
-			
+				
 				dic['rates']['lay'] = prices[i] 
 				dic['start'] = starts[i]
 				dic['market-name'] = mnames[i]
@@ -213,7 +228,7 @@ def main():
 			#~ print '--WARNING: not found %s (%s)' % (dic['name'],dic['market-name'])
 	print '%d/%d matched' % (len(data),len(sportsbook))
 					
-	success = compare(data,limit=0.1)
+	success = compare(data,limit=0.)
 	
 	embed()
 	

@@ -19,12 +19,19 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By		
 
 @cached
-def get_data_sportsbooks(urls):
+def get_data_sportsbooks(urls,exch=None):
 	
 	#get links
 	spider = Spider(gui=0)
 	
+	names = []
+	for item in exch:
+		split = item['market-name'].lower().split(" v ")
+		names.append(split[0])
+		names.append(split[-1])
+		
 	matchlinks=[]
+	print ''
 	for i,url in enumerate(urls):
 		print 'get links from:  %s' % url
 		spider.get_url(url)
@@ -32,8 +39,11 @@ def get_data_sportsbooks(urls):
 		for elem in elems:
 			if "in-play" in elem.get_attribute("class"): continue
 			else:
-				matchlinks.append( elem.get_attribute("href") )
-	
+				link = elem.get_attribute("href")
+				for name in names:
+					if name.lower() in link:
+						matchlinks.append( link )
+						break
 	
 	#get data from oddschecker
 	sportsbook = []	
@@ -44,24 +54,34 @@ def get_data_sportsbooks(urls):
 		spider.get_url(link)
 		market_name = spider.driver.find_element_by_xpath('//div[@class="page-description module"]/header/h1').text.replace(" Winner Betting Odds","")
 		
-		dic = { 'market-name':market_name, 'rates':{} }
+		dic = { 'market-name':market_name }
 		
 		tmp = {}
+		headers=spider.driver.find_elements_by_xpath('//thead/tr[@class="eventTableHeader"]/td')
 		options = spider.driver.find_elements_by_xpath('//tbody/tr')		
 		for option in options:
 			
 			elems =  option.find_elements_by_xpath('./td')
 			
 			sel  = elems[0].text.split("\n")[0]
-			price = elems[1].get_attribute('data-odig')
-			if price!=None: price = float(price)
+
+			rates = {}
+			for i in xrange(len(headers)):
+				head = headers[i].get_attribute("data-bk")
+				if head==None: continue
+				else:
+					elem = elems[i].get_attribute('data-odig')
+					if elem!=None:	elem=float(elem)
+					else: elem=0.
+					
+					rates[head]=elem
 			
-			tmp[sel] = price
+			tmp[sel] = rates
 		
 		home,away = dic['market-name'].split(" v ")
 		rates = [ tmp[home], tmp['Draw'], tmp[away] ]
-
-		dic['rates']['bet365'] = rates	
+		
+		dic['rates'] = rates	
 		sportsbook.append(dic)
 		
 	spider.close()
@@ -136,30 +156,40 @@ def get_data_exchange():
 	
 	return exchange
 
-def compare(data,book='bet365',limit=0.1):
+def compare(data,limit=0.1):
 	
 	success=False
 			
-	out='\nResult:\n'
-				
+	b = Bets()		
+	out='\nResult:\n'	
 	for item in data:
 		
-		back=item['rates'][book]
-		lay =item['rates']['lay'] 
-		names =item['rates']['items'] 
+		backs=item['rates']
+		lays =item['lay'] 
+		names =item['items'] 
 		for i in xrange(3):
 			
-			if lay[i]==None: continue
+			if lays[i]==None: continue
 			
-			diff = lay[i] - back[i]
-		
-			if back[i]<1.5 and diff>0: continue
-			if diff > limit: continue
-		
-			out += '%5.2f  %s  back=%5.2f  lay=%5.2f  -> %s (%s - %s)\n' % (diff,names[i].ljust(5," "),back[i],lay[i],item['start'],item['market-name'],item['competition'])
-		
-		if diff<0:
-			success=True
+			for k in backs[i].keys():
+				
+				name = names[i]
+				lay = lays[i]
+				back= backs[i][k]
+					
+				diff = lay - back
+			
+				if back<1.5 and diff>0: continue
+				if diff > limit: continue
+				
+				b.set_rates(back,lay)
+				b.get_stake(50,verbose=False)
+				profit = b.get_profit_laywin()
+				
+				out += '%5.2f  (%5.2f)  %s  (%s)  back=%5.2f  lay=%5.2f  -> %s (%s - %s)\n' % (diff,profit,name.ljust(5," "),k,back,lay,item['start'],item['market-name'],item['competition'])
+			
+				if diff<0:
+					success=True
 		
 	if out=='': out = 'WARNING: no item fits specifications'
 	
@@ -180,9 +210,8 @@ if 1:
 					'http://www.oddschecker.com/football/scottish/premiership']	
 	urls+=uk 
 
-book = get_data_sportsbooks(urls)
-
 exch = get_data_exchange()
+book = get_data_sportsbooks(urls,exch)
 
 #join datasets
 print '\njoin datasets'
@@ -194,8 +223,8 @@ for b in book:
 		if re.search(b['market-name'],e['market-name'],re.IGNORECASE):
 			b['competition'] = e['competition']
 			b['start'] = e['start']
-			b['rates']['lay'] = e['rates']
-			b['rates']['items'] = ['home','X','away']
+			b['items'] = ['home','X','away']			
+			b['lay'] = e['rates']
 			
 			data.append(b)
 			found=True
