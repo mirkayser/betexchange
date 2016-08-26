@@ -73,7 +73,7 @@ def main():
 	print 'here starts main program'
 
 	b = Bets()
-	diffs = np.linspace(-0.1,0.1,21)
+	diffs = np.linspace(-0.1,0.1,201)
 	
 	brates,lrates,profits = [],[],[]
 	brate=1.01
@@ -83,38 +83,45 @@ def main():
 			
 			lrate = brate+d
 			
-			if lrate<1.01: lrate=1.01
+			if lrate<1.01: continue
 			
 			b.set_rates(brate,lrate)
 			b.get_stake(50,verbose=False)
 			profit = b.get_profit_laywin()
 			
-			if profit>0: 
-				print brate,lrate,profit
-			
 			brates.append(brate)
 			lrates.append(lrate)
 			profits.append(profit)
 		
-		brate+=.1
+		brate+=.01
 	
 	diffs = [ brates[i]-lrates[i] for i in xrange(len(brates)) ]
 	array = np.array(zip(brates,lrates,diffs,profits),dtype=[('brate',float),('lrate',float),('diff',float),('profit',float)])
+	
+	brates,min_diffs = [],[]
+	np.sort(array,order=['brate','profit'])
+	a = array[array['profit']>0]
+	for item in a:
+		tmp = a[a['brate']==item['brate']]
+		
+		min_diff = np.min(tmp['diff'])
+		
+		brates.append(item['brate'])
+		min_diffs.append(min_diff)
 	
 	mp.figure(num=1, figsize=(8, 6), dpi=80)
 	mp.clf()
 	gs1 = gridspec.GridSpec(1,1)
 	ax1 = mp.subplot(gs1[0, 0])
 	
-	ax1.plot(array['brate'],array['profit'],marker='.',ls='',c='r',label='')
-	
-	ax1.axhline(0, c='#B3B3B3', ls='--')
+	ax1.plot(brates,min_diffs,marker='',ls='-',c='r',label='')
 	
 	#~ ax1.set_title(r'cashflow globalfit ($\sigma=%d$)' % self.sigma)
-	#~ ax1.set_xlabel(r'years', size='large')
-	#~ ax1.set_ylabel(r'cashflow / k', size='large')
+	ax1.set_xlabel(r'back rate', size='large')
+	ax1.set_ylabel(r'difference', size='large')
 	#~ ax1.set_xlim(left=np.min(x)-.5,right=np.max(x)+.5)
 	#~ mp.savefig('cf_globalfit_%dsigma.pdf' % self.sigma)
+	
 	mp.show()	
 	
 		
