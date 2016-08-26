@@ -11,7 +11,7 @@ from optparse import OptionParser
 from operator import itemgetter
 from my.spider import Spider
 from my.tools import *
-from pyik.performance import cached
+from pyik.performance import cached,pmap
 
 from betcalc import Bets
 
@@ -19,74 +19,96 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By		
 
 @cached
-def get_data_sportsbooks(urls,exch=None):
+def get_data_sportsbooks(link):
 	
-	#get links
+	#~ print 'get data %s' % link
+	
 	spider = Spider(gui=0)
+	spider.get_url(link)
+	market_name = spider.driver.find_element_by_xpath('//div[@class="page-description module"]/header/h1').text.replace(" Winner Betting Odds","")
+	
+	dic = { 'market-name':market_name }
+	
+	tmp = {}
+	headers=spider.driver.find_elements_by_xpath('//thead/tr[@class="eventTableHeader"]/td')
+	options = spider.driver.find_elements_by_xpath('//tbody/tr')		
+	for option in options:
+		
+		elems =  option.find_elements_by_xpath('./td')
+		
+		sel  = elems[0].text.split("\n")[0]
+
+		rates = {}
+		for i in xrange(len(headers)):
+			head = headers[i].get_attribute("data-bk")
+			if head==None: continue
+			else:
+				elem = elems[i].get_attribute('data-odig')
+				if elem!=None:	elem=float(elem)
+				else: elem=0.
+				
+				rates[head]=elem
+		
+		tmp[sel] = rates
+	
+	home,away = dic['market-name'].split(" v ")
+	rates = [ tmp[home], tmp['Draw'], tmp[away] ]
+	
+	dic['rates'] = rates	
+	spider.close()
+	
+	return dic
+
+@cached
+def get_links_sportsbooks(args):
+	
+	url = args[0]
+	names = args[1]	
+	
+	spider = Spider(gui=0)
+		
+	print 'get links from:  %s' % url
+	matchlinks=[]
+	spider.get_url(url)
+	elems = spider.driver.find_elements_by_xpath('//td[@class="betting"]/a')
+	for elem in elems:
+		if "in-play" in elem.get_attribute("class"): continue
+		else:
+			link = elem.get_attribute("href")
+			for name in names:
+				if name.lower() in link:
+					matchlinks.append(link)
+					break
+	spider.close()
+	return matchlinks
+
+#~ @cached
+def sportsbooks(urls,exch=None):
 	
 	names = []
 	for item in exch:
-		split = item['market-name'].lower().split(" v ")
+		split = item['market-name'].lower().split(" ")
 		names.append(split[0])
 		names.append(split[-1])
-		
-	matchlinks=[]
-	print ''
-	for i,url in enumerate(urls):
-		print 'get links from:  %s' % url
-		spider.get_url(url)
-		elems = spider.driver.find_elements_by_xpath('//td[@class="betting"]/a')
-		for elem in elems:
-			if "in-play" in elem.get_attribute("class"): continue
-			else:
-				link = elem.get_attribute("href")
-				for name in names:
-					if name.lower() in link:
-						matchlinks.append( link )
-						break
 	
-	#get data from oddschecker
-	sportsbook = []	
+	args = []
+	for url in urls:
+		args.append( (url,names) )
+	
+	linklists = pmap(get_links_sportsbooks, args, numProcesses=3,displayProgress = True)
+
+	matchlinks = []
+	for item in linklists:
+		for entry in item:
+			matchlinks.append(entry)
+	
+	#get data from oddschecker	
 	print 'getting data from sportsbooks: (%d events)' % len(matchlinks)
-	bar = progressbar.ProgressBar()
-	for link in bar(matchlinks):
-
-		spider.get_url(link)
-		market_name = spider.driver.find_element_by_xpath('//div[@class="page-description module"]/header/h1').text.replace(" Winner Betting Odds","")
-		
-		dic = { 'market-name':market_name }
-		
-		tmp = {}
-		headers=spider.driver.find_elements_by_xpath('//thead/tr[@class="eventTableHeader"]/td')
-		options = spider.driver.find_elements_by_xpath('//tbody/tr')		
-		for option in options:
-			
-			elems =  option.find_elements_by_xpath('./td')
-			
-			sel  = elems[0].text.split("\n")[0]
-
-			rates = {}
-			for i in xrange(len(headers)):
-				head = headers[i].get_attribute("data-bk")
-				if head==None: continue
-				else:
-					elem = elems[i].get_attribute('data-odig')
-					if elem!=None:	elem=float(elem)
-					else: elem=0.
-					
-					rates[head]=elem
-			
-			tmp[sel] = rates
-		
-		home,away = dic['market-name'].split(" v ")
-		rates = [ tmp[home], tmp['Draw'], tmp[away] ]
-		
-		dic['rates'] = rates	
-		sportsbook.append(dic)
-		
-	spider.close()
 	
-	return sportsbook
+	sportsbooks = pmap(get_data_sportsbooks, matchlinks, numProcesses=4,displayProgress = True)
+		
+	return sportsbooks
+	
 	
 @cached	
 def get_data_exchange():
@@ -203,15 +225,17 @@ def main():
 urls = []
 
 if 1:
-	uk = [	'http://www.oddschecker.com/football/english/premier-league',
-					'http://www.oddschecker.com/football/english/championship',
-					'http://www.oddschecker.com/football/english/league-1',
+	uk1 = [	'http://www.oddschecker.com/football/english/premier-league',
+					'http://www.oddschecker.com/football/english/championship']
+			
+	uk2 = [	'http://www.oddschecker.com/football/english/league-1',
 					'http://www.oddschecker.com/football/english/league-2',
 					'http://www.oddschecker.com/football/scottish/premiership']	
-	urls+=uk 
+	urls+=uk1 
+	urls+=uk2 
 
 exch = get_data_exchange()
-book = get_data_sportsbooks(urls,exch)
+book = sportsbooks(urls,exch)
 
 #join datasets
 print '\njoin datasets'
