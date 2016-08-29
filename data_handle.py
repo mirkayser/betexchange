@@ -67,6 +67,10 @@ class Data_Handle():
 				
 				uncomplete=False
 				
+				# min timedelta before start
+				if analysis:	min_timedelta=50
+				else:					min_timedelta=15				
+				
 				with open(fname,'rb')as inputfile: 
 					event = pickle.load(inputfile)
 				
@@ -74,27 +78,24 @@ class Data_Handle():
 				if countries!=None:
 					if not event.has_key('country'): continue
 					if not event['country'] in countries: continue 
-					#~ print event['country']
+
 				data = event['data']
 				
-				#erase runners with empty list
+				#erase runners with less than 5 datapoints within timeframe
 				for k in data.keys():
-					if len(data[k])==0: 
+					
+					for k in data.keys():
+						if len(data[k])>0: 
+							if datetime.timedelta(minutes=min_timedelta) < ( event['time_e'] - data[k][-1][0] ):	
+								data[k]=[]
+
+					if len(data[k])<5: 
 						data.pop(k,None)
 			
 				#skip sets without data
 				if len(data.keys())<1: 
 					uncomplete=True
-				
-				#skip sets without complete data
-				if analysis:	min_timedelta=50
-				else:					min_timedelta=15
-				
-				if len(data.keys())==0: 
-					uncomplete=True
-				elif datetime.timedelta(minutes=min_timedelta) < ( event['time_e'] - data[data.keys()[0]][-1][0] ):	
-					uncomplete=True
-				
+			
 				#save quality data sets 
 				if not uncomplete:
 					#~ event['time']=event['data'][event['data'].keys()[-1]][-1][0]
@@ -159,8 +160,8 @@ class Data_Handle():
 				ax1.plot(xs,ys,marker='',ls='-',c=colorlist()[i])
 			
 		ax1.set_title(r'Event %d' % eid)
-		ax1.set_xlabel(r'price', size='large')
-		ax1.set_ylabel(r'time', size='large')
+		ax1.set_xlabel(r'time', size='large')
+		ax1.set_ylabel(r'price', size='large')
 		#~ ax1.set_xlim(left=np.min(x)-.5,right=np.max(x)+.5)
 		mp.savefig('event_%d.pdf' % eid)
 
@@ -218,10 +219,11 @@ class DataML():
 		features = self.flist[eid]
 		features = features[features['rid']==rid]
 		
-		if len(a)>=5:	
+		if len(a)>=5 and len(features)>=5:	
 			#~ slope = self.get_slope(a['time'],a['price'])
 			
 			start = { 'time':features['time'][-1], 'price':features['price'][-1] }
+
 			
 			minimum = np.min(a['price'])
 			maximum = np.max(a['price'])
@@ -273,8 +275,23 @@ class DataML():
 	
 	def get_features(self,eid,rid):
 		
-		a = self.flist[eid]
-		a = a[a['rid']==rid]
+		def get_rank(event,rid,index):
+			
+			rids = list(set(event['rid']))
+			prices=[ event[event['rid']==id][index]['price'] for id in rids ]
+			
+			array = np.array(zip(rids,prices),dtype=[('rid',int),('price',float)])
+			array.sort(order=['price'])
+			
+			for i in xrange(len(array)):
+				if array[i]['rid']==rid:
+					rank=i
+					dif_first=array[i]['price']-array[0]['price']
+					break
+			return rank,dif_first
+		
+		event = self.flist[eid]
+		a = event[event['rid']==rid]
 		
 		dic={}
 		if len(a)>=5:	
@@ -289,7 +306,10 @@ class DataML():
 			minimum = np.min(a['price'])
 			maximum = np.max(a['price'])
 			
-			dic['first'] = first
+			lastrank,last_dif = get_rank(event,rid,-1)
+			midrank,mid_dif = get_rank(event,rid,len(a)/2)
+			
+			#~ dic['first'] = first
 			dic['last'] = last
 			dic['median'] = median
 			#~ dic['avg'] = avg
@@ -297,9 +317,13 @@ class DataML():
 			dic['end_slope'] = end_slope
 			#~ dic['med_dif'] = last-median		
 			dic['maximas'] = maximas	
-			#~ dic['min'] = minimum	
-			#~ dic['max'] = maximum	
+			dic['min'] = minimum	
+			dic['max'] = maximum	
 			
+			dic['lastrank'] = lastrank	
+			dic['last_dif'] = last_dif	
+			dic['midrank'] = midrank	
+			dic['mid_dif'] = mid_dif	
 			
 		else: dic['nan']=np.nan
 					
@@ -369,6 +393,12 @@ def main():
 	
 	#read/cut raw data		
 	d = Data_Handle().cut_raw_data(fnames=fnames,countries=countries,analysis=False,save=options.save,remove=options.remove)
+	
+	#~ #load data
+	#~ d = Data_Handle().load_data()	
+	#~ for i in xrange(15):
+		#~ d.draw_event(i)
+
 	
 if __name__ == "__main__":
     main()
