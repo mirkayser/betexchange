@@ -205,9 +205,6 @@ def main():
 			if len(args)<1:
 				raise NameError("Usage: %s /path_some_file")
 			else: fnames=args
-			
-			#~ #create dummy files for testing purpose
-			#~ if fnames[0].split("/")[1]=='test':	create_dummy_files(fnames)
 
 			#load event data from fnames
 			dh = Data_Handle().cut_raw_data(fnames=fnames,analysis=True)
