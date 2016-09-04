@@ -13,7 +13,7 @@ from my.spider import Spider
 from my.tools import *
 from pyik.performance import cached
 
-from betcalc import Bets
+from betcalc import Lay_Bets
 
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By		
@@ -175,7 +175,7 @@ def compare(data,limit=0.5):
 	
 	success=False
 	
-	b = Bets()
+	b = Lay_Bets()
 	out='\nResult:\n'		
 	for item in data:
 		 
@@ -245,7 +245,7 @@ if __name__ == "__main__":
 
 	if not options.repeat:
 		success = main()	
-		b = Bets()
+		b = Lay_Bets()
 		#~ embed()
 		
 	else:

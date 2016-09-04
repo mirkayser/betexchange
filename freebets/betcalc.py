@@ -11,7 +11,7 @@ from my.tools import closeTo
 
 np.set_printoptions(precision=3, threshold=50, linewidth=100)		
 
-class Bets():
+class Lay_Bets():
 
 	def __init__(self,commision=0.065,exchange_rate=1.1):
 		

@@ -12,14 +12,14 @@ from optparse import OptionParser
 #~ from pyik.performance import cached,pmap
 
 from betmod import *
-from betcalc import Bets
+from betcalc import Lay_Bets
 
 
 def compare(data,limit=0.1):
 	
 	success=False
 			
-	b = Bets()		
+	b = Lay_Bets()		
 	out='\nResult:\n'	
 	for item in data:
 		
@@ -97,7 +97,7 @@ print '%d/%d matched' % (len(data),len(book))
 					
 success = compare(data,limit=0.0)
 
-b = Bets()
+b = Lay_Bets()
 embed()
 
 	#~ return success
