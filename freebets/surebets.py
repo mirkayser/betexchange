@@ -100,43 +100,45 @@ def main():
 
 #parse options
 parser = OptionParser()
-parser.add_option("--pool", dest="pool", action="store_true", default=False,
+parser.add_option("-p","--pool", dest="pool", action="store_true", default=False,
                   help="use pmap to to parallelize jobs")
+parser.add_option("-a","--all", dest="all", action="store_true", default=False,
+                  help="use all available urls")
 (options, args) = parser.parse_args()
 
 urls = []
 
-if 'uk' in args:
+if 'uk' in args or options.all:
 	urls+= ['http://www.oddschecker.com/football/english/premier-league',
 					'http://www.oddschecker.com/football/english/championship',
 					'http://www.oddschecker.com/football/english/league-1',
 					'http://www.oddschecker.com/football/english/league-2',
 					'http://www.oddschecker.com/football/scottish/premiership',
 					]	
-if 'de' in args:	
+if 'de' in args or options.all:	
 	urls+= ['http://www.oddschecker.com/football/germany/bundesliga',
 					'http://www.oddschecker.com/football/germany/bundesliga-2',
 					'http://www.oddschecker.com/football/germany/3rd-liga',
 					'http://www.oddschecker.com/football/germany/dfb-pokal',
 					]
-if 'it' in args:	
+if 'it' in args or options.all:	
 	urls+= ['http://www.oddschecker.com/football/italy/serie-a',
 					'http://www.oddschecker.com/football/italy/serie-b',
 					'http://www.oddschecker.com/football/italy/coppa-italia',
 					]
-if 'sp' in args:					
+if 'sp' in args or options.all:					
 	urls+= ['http://www.oddschecker.com/football/spain/la-liga-primera',
 					'http://www.oddschecker.com/football/spain/la-liga-segunda',
 					'http://www.oddschecker.com/football/spain/copa-del-rey',
 					'http://www.oddschecker.com/football/spain/la-liga-segunda-b',
 					]
-if 'fr' in args:
+if 'fr' in args or options.all:
 	urls+= ['http://www.oddschecker.com/football/france/ligue-1',
 					'http://www.oddschecker.com/football/france/ligue-2',
 					'http://www.oddschecker.com/football/france/national',
 					'http://www.oddschecker.com/football/france/cfa',
 					]
-if 'tennis' in args:	
+if 'tennis' in args or options.all:	
 	urls+= [	'http://www.oddschecker.com/tennis/atp-winston-salem',
 						'http://www.oddschecker.com/tennis/challenger-tour',
 						'http://www.oddschecker.com/tennis/us-open/mens',
@@ -153,9 +155,9 @@ for event in events:
 	profit = sure.get_profit()
 	bookies = sure.get_bookies()
 	total_bookies = sure.get_total_bookies()
-	#~ if sure.percentage>0 and np.all(bookies!=''):
-	print profit,sure.percentage,bookies,event['market-name']
-	booky_list += total_bookies
+	if sure.percentage>1 and np.all(bookies!=''):
+		print profit,sure.percentage,bookies,event['market-name']
+		booky_list += total_bookies
 		
 from collections import Counter
 
