@@ -23,8 +23,9 @@ def get_data_sportsbooks(link):
 	
 	dic = { 'market-name':market_name }
 	
-	tmp = {}
-	headers=spider.driver.find_elements_by_xpath('//thead/tr[@class="eventTableHeader"]/td')
+	rates=[]
+	#~ headers=spider.driver.find_elements_by_xpath('//thead/tr[@class="eventTableHeader"]/td')
+	headers=spider.driver.find_elements_by_xpath('//thead/tr[@class="eventTableHeader"]/td/aside/a')
 	options = spider.driver.find_elements_by_xpath('//tbody/tr')		
 	for option in options:
 		
@@ -32,22 +33,20 @@ def get_data_sportsbooks(link):
 		
 		sel  = elems[0].text.split("\n")[0]
 
-		rates = {}
+		books = {}
 		for i in xrange(len(headers)):
-			head = headers[i].get_attribute("data-bk")
+			#~ head = headers[i].get_attribute("data-bk")
+			head = headers[i].get_attribute("title")
 			if head==None: continue
 			else:
 				elem = elems[i].get_attribute('data-odig')
 				if elem!=None:	elem=float(elem)
 				else: elem=0.
 				
-				rates[head]=elem
+				books[head]=elem
 		
-		tmp[sel] = rates
-	
-	home,away = dic['market-name'].split(" v ")
-	rates = [ tmp[home], tmp['Draw'], tmp[away] ]
-	
+		rates.append(books)
+
 	dic['rates'] = rates	
 	spider.close()
 	
@@ -79,7 +78,7 @@ def get_links_sportsbooks(args):
 	return matchlinks
 
 #~ @cached
-def sportsbooks(urls,exch=None):
+def sportsbooks(urls,pool=False,exch=None):
 	
 	if exch!=None:
 		names = []
@@ -93,18 +92,31 @@ def sportsbooks(urls,exch=None):
 	for url in urls:
 		args.append( (url,names) )
 	
-	linklists = pmap(get_links_sportsbooks, args, numProcesses=3,displayProgress = True)
+	if pool:		
+		linklists = pmap(get_links_sportsbooks, args, numProcesses=2,displayProgress = True)
+	else:
+		linklists=[]
+		for arg in args:
+			linklists.append( get_links_sportsbooks(arg) )
 
 	matchlinks = []
 	for item in linklists:
 		for entry in item:
 			matchlinks.append(entry)
 	
+	#~ matchlinks=matchlinks[:5]
+	
 	#get data from oddschecker	
 	print 'getting data from sportsbooks: (%d events)' % len(matchlinks)
 	
-	sportsbooks = pmap(get_data_sportsbooks, matchlinks, numProcesses=4,displayProgress = True)
-		
+	if pool:
+		sportsbooks = pmap(get_data_sportsbooks, matchlinks, numProcesses=2,displayProgress = True)
+	else:
+		bar=progressbar.ProgressBar()
+		sportsbooks = []
+		for link in bar(matchlinks):
+			sportsbooks.append( get_data_sportsbooks(link) )
+	
 	return sportsbooks
 	
 	
