@@ -16,18 +16,21 @@ def get_best_prices(events):
 	
 		new_event={}
 		new_event['market-name']=event['market-name']
+		new_event['cup-name']=event['cup-name']
 		new_event['rates']=[]
 		new_event['bookies']=[]
 		
 		for item in event['rates']:
 			
+			if item=={}: continue
 			best=max(item.values())
 			bookies= [ k for k in item.keys() if item[k]==best ]
 			
 			new_event['rates'].append(best)
 			new_event['bookies'].append(bookies)
 		
-		new_list.append(new_event)
+		if len(new_event['rates'])>0:
+			new_list.append(new_event)
 	
 	return new_list
 
@@ -138,6 +141,10 @@ if 'fr' in args or options.all:
 					'http://www.oddschecker.com/football/france/national',
 					'http://www.oddschecker.com/football/france/cfa',
 					]
+if 'uefa' in args or options.all:
+	urls+= [	'http://www.oddschecker.com/football/champions-league',
+						'http://www.oddschecker.com/football/europa-league',
+						]
 if 'tennis' in args or options.all:	
 	urls+= [	'http://www.oddschecker.com/tennis/atp-winston-salem',
 						'http://www.oddschecker.com/tennis/challenger-tour',
@@ -156,7 +163,7 @@ for event in events:
 	bookies = sure.get_bookies()
 	total_bookies = sure.get_total_bookies()
 	if sure.percentage>1 and np.all(bookies!=''):
-		print profit,sure.percentage,bookies,event['market-name']
+		print profit,sure.percentage,bookies,event['market-name'],event['cup-name']
 		booky_list += total_bookies
 		
 from collections import Counter

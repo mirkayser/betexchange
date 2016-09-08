@@ -17,11 +17,13 @@ def get_data_sportsbooks(link):
 	
 	#~ print 'get data %s' % link
 	
+	cup_name = link.split("/")[-3]
+	
 	spider = Spider(gui=0)
 	spider.get_url(link)
 	market_name = spider.driver.find_element_by_xpath('//div[@class="page-description module"]/header/h1').text.replace(" Winner Betting Odds","")
 	
-	dic = { 'market-name':market_name }
+	dic = { 'market-name':market_name, 'cup-name':cup_name }
 	
 	rates=[]
 	#~ headers=spider.driver.find_elements_by_xpath('//thead/tr[@class="eventTableHeader"]/td')
@@ -104,7 +106,7 @@ def sportsbooks(urls,pool=False,exch=None):
 		for entry in item:
 			matchlinks.append(entry)
 	
-	#~ matchlinks=matchlinks[:5]
+	matchlinks=matchlinks[:3]
 	
 	#get data from oddschecker	
 	print 'getting data from sportsbooks: (%d events)' % len(matchlinks)
