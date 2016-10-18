@@ -381,6 +381,8 @@ def main():
 	                  help="save data to numpy array")
 	parser.add_option("--uk", dest="uk", action="store_true", default=False,
 	                  help="only consider events from uk or ireland")
+	parser.add_option("--draw", dest="draw", default='0',
+	                  help="draw events, input num events to be drawn")
 	(options, args) = parser.parse_args()
 
 	#get filenames
@@ -391,13 +393,15 @@ def main():
 	if options.uk: 	countries=['GB','IE']
 	else:						countries=None
 	
-	#read/cut raw data		
-	d = Data_Handle().cut_raw_data(fnames=fnames,countries=countries,analysis=False,save=options.save,remove=options.remove)
-	
-	#~ #load data
-	#~ d = Data_Handle().load_data()	
-	#~ for i in xrange(15):
-		#~ d.draw_event(i)
+	if options.draw=='0':
+		#read/cut raw data		
+		d = Data_Handle().cut_raw_data(fnames=fnames,countries=countries,analysis=False,save=options.save,remove=options.remove)
+
+	else:
+		#load data
+		d = Data_Handle().load_data()	
+		for i in xrange(int(options.draw)):
+			d.draw_event(i)
 
 	
 if __name__ == "__main__":
