@@ -45,6 +45,8 @@ def compare(data,limit=0.1):
 				b.get_stake(50,verbose=False)
 				profit = b.get_profit_laywin()
 				
+				if k!='Sky Bet': continue
+				
 				out += '%5.2f  (%5.2f)  %s  (%s)  back=%5.2f  lay=%5.2f  -> %s (%s - %s)\n' % (diff,profit,name.ljust(5," "),k,back,lay,item['start'],item['market-name'],item['competition'])
 			
 				if diff<0:
@@ -62,43 +64,44 @@ def main():
 urls = []
 
 if 1:
-	uk1 = [	'http://www.oddschecker.com/football/english/premier-league',
-					'http://www.oddschecker.com/football/english/championship']
+	urls = [
+				#'http://www.oddschecker.com/football/english/premier-league',
+				'http://www.oddschecker.com/football/english/championship',
+				'http://www.oddschecker.com/football/english/league-1',
+				'http://www.oddschecker.com/football/english/league-2',
+				#'http://www.oddschecker.com/football/scottish/premiership'
+				]	
+
+for url in urls:
+
+	exch = get_data_exchange()
+	book = sportsbooks([url],exch=None)
+	
+	#join datasets
+	print '\njoin datasets'
+	data = []
+	for b in book:
+		found=False
+		for e in exch:
 			
-	uk2 = [	'http://www.oddschecker.com/football/english/league-1',
-					'http://www.oddschecker.com/football/english/league-2',
-					'http://www.oddschecker.com/football/scottish/premiership']	
-	urls+=uk1 
-	#~ urls+=uk2 
-
-exch = get_data_exchange()
-book = sportsbooks(urls,exch=None)
-
-#join datasets
-print '\njoin datasets'
-data = []
-for b in book:
-	found=False
-	for e in exch:
-		
-		if re.search(b['market-name'],e['market-name'],re.IGNORECASE):
-			b['competition'] = e['competition']
-			b['start'] = e['start']
-			b['items'] = ['home','X','away']			
-			b['lay'] = e['rates']
+			if re.search(b['market-name'],e['market-name'],re.IGNORECASE):
+				b['competition'] = e['competition']
+				b['start'] = e['start']
+				b['items'] = ['home','X','away']			
+				b['lay'] = e['rates']
+				
+				data.append(b)
+				found=True
+				break
+	
+		if not found: print 'not found: ',b['market-name']
 			
-			data.append(b)
-			found=True
-			break
-
-	if not found: print 'not found: ',b['market-name']
-		
-print '%d/%d matched' % (len(data),len(book))
-					
-success = compare(data,limit=0.0)
-
-b = Lay_Bets()
-embed()
+	print '%d/%d matched' % (len(data),len(book))
+						
+	success = compare(data,limit=0.0)
+	
+	b = Lay_Bets()
+	embed()
 
 	#~ return success
 

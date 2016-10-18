@@ -106,7 +106,7 @@ def sportsbooks(urls,pool=False,exch=None):
 		for entry in item:
 			matchlinks.append(entry)
 	
-	matchlinks=matchlinks[:3]
+	#~ matchlinks=matchlinks[:3]
 	
 	#get data from oddschecker	
 	print 'getting data from sportsbooks: (%d events)' % len(matchlinks)
@@ -122,7 +122,7 @@ def sportsbooks(urls,pool=False,exch=None):
 	return sportsbooks
 	
 	
-@cached	
+#~ @cached	
 def get_data_exchange():
 	
 	start='unknown'
@@ -137,6 +137,9 @@ def get_data_exchange():
 		
 		if 'Rio' in dic['name']: continue
 		if 'UEFA' in dic['name']: continue
+		if 'National' in dic['name']: continue
+		if 'Primera' in dic['name']: continue
+		if 'Premier' in dic['name']: continue
 		competitions.append(dic)	
 	
 	print 'get data from betfair exchange: (%d urls)' % len(competitions)
