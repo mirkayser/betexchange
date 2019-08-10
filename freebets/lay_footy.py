@@ -73,7 +73,7 @@ if 1:
 				]	
 
 for url in urls:
-
+		
 	exch = get_data_exchange()
 	book = sportsbooks([url],exch=None)
 	
@@ -100,9 +100,11 @@ for url in urls:
 						
 	success = compare(data,limit=0.0)
 	
-	b = Lay_Bets()
+	b = Lay_Bets(exchange_rate=1)
 	embed()
-
+	
+	
+	
 	#~ return success
 
 

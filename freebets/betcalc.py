@@ -13,7 +13,7 @@ np.set_printoptions(precision=3, threshold=50, linewidth=100)
 
 class Lay_Bets():
 
-	def __init__(self,commision=0.065,exchange_rate=1.1):
+	def __init__(self,commision=0.065,exchange_rate=1):
 		
 		self.comfactor = 1-commision
 		self.exchange_rate=exchange_rate

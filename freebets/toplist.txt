@@ -1,0 +1,17 @@
+[(u'Stan James', 4), (u'Bet Victor', 3), (u'William Hill', 2), (u'188Bet', 2), (u'Betstars', 1)]
+(u'Sky Bet', 4), (u'Stan James', 3), (u'Unibet', 3), (u'Coral', 3), (u'Boylesports', 3)
+[(u'188Bet', 3), (u'Bet Victor', 2), (u'BetBright', 2), (u'Paddy Power', 2), (u'Ladbrokes', 2)]
+
+09/09:
+0.19 1.45 [u'William Hill' u'Bet Victor' u'188Bet'] Man City v Bournemouth premier-league
+0.31 1.86 [u'William Hill' u'188Bet' u'Winner'] RB Leipzig v Borussia Dortmund bundesliga
+0.35 1.39 [u'32Red Bet' u'188Bet' u'Bet Victor'] Augsburg v Mainz 05 bundesliga
+0.22 1.64 [u'Betfair' u'Betway' u'188Bet'] Juventus v Sassuolo serie-a
+0.81 3.49 [u'Paddy Power' u'188Bet' u'BetBright'] Bologna v Cagliari serie-a
+0.2 1.25 [u'Boylesports' u'Matchbook' u'Winner'] Sevilla v Las Palmas la-liga-primera
+0.39 1.52 [u'Paddy Power' u'Bet Victor' u'32Red Bet'] Lille v Monaco ligue-1
+4.82 30.74 [u'Boylesports' u'Sportingbet' u'Stan James'] Amiens v Tours ligue-2
+0.78 2.67 [u'32Red Bet' u'Boylesports' u'Stan James'] Auxerre v Sochaux ligue-2
+18.15 98.37 [u'Matchbook' u'Stan James' u'Betfair Sportsbook'] Niort v Nimes ligue-2
+6.32 37.22 [u'Matchbook' u'188Bet' u'32Red Bet'] Reims v GFCO Ajaccio ligue-2
+[(u'188Bet', 7), (u'Paddy Power', 6), (u'32Red Bet', 4), (u'Bet Victor', 3), (u'Stan James', 3)]
